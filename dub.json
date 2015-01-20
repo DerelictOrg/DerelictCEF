@@ -1,0 +1,16 @@
+{
+    "name": "derelict-cef",
+    "description": "A dynamic binding to the Chromium Embedded Framework.",
+    "homepage": "https://github.com/DerelictOrg/DerelictCEF",
+    "license": "Boost",
+    "authors": [
+        "Mike Parker"
+    ],
+
+    "targetName": "DerelictCEF",
+    "targetPath": "lib",
+
+    "dependencies": {
+        "derelict-util": ">=1.0.3"
+    }
+}
