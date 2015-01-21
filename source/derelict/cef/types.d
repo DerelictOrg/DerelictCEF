@@ -60,17 +60,27 @@ alias cef_string_userfree_utf8_t = cef_string_utf8_t*;
 alias cef_string_userfree_utf16_t = cef_string_utf16_t*;
 
 version( DerelictCEF_WideStrings ) {
+    enum CEF_STRING_TYPE_WIDE = true;
+    enum CEF_STRING_TYPE_UTF16 = false;
+    enum CEF_STRING_TYPE_UTF8 = false;
     alias cef_char_t = wchar_t;
     alias cef_string_t = cef_string_wide_t;
     alias cef_string_userfree_t = cef_string_userfree_wide_t;
-} else version( DerelictCEF_UTF16Strings ) {
-    alias cef_char_t = wchar;
-    alias cef_string_t = cef_string_utf16_t;
-    alias cef_string_userfree_t = cef_string_userfree_utf16_t;
-} else {
+} else version( DerelictCEF_UTF8Strings ) {
+    enum CEF_STRING_TYPE_WIDE = false;
+    enum CEF_STRING_TYPE_UTF16 = false;
+    enum CEF_STRING_TYPE_UTF8 = true;
     alias cef_char_t = char;
     alias cef_string_t = cef_string_utf8_t;
     alias cef_string_userfree_t = cef_string_userfree_utf8_t;
+} else {
+    // CEF builds with UTF16 strings by default.
+    enum CEF_STRING_TYPE_WIDE = false;
+    enum CEF_STRING_TYPE_UTF16 = true;
+    enum CEF_STRING_TYPE_UTF8 = false;
+    alias cef_char_t = wchar;
+    alias cef_string_t = cef_string_utf16_t;
+    alias cef_string_userfree_t = cef_string_userfree_utf16_t;
 }
 
 // cef_time.h
@@ -701,31 +711,59 @@ struct cef_geoposition_t {
 }
 
 // cef_types_win.h
+alias cef_cursor_handle_t = void*;
+alias cef_event_handle_t = void*;
+alias cef_window_handle_t = void*;
+alias cef_text_input_context_t = void*;
+
 static if( Derelict_OS_Windows ) {
-    private import core.sys.windows.windows;
-
-    alias cef_cursor_handle_t = HCURSOR;
-    alias cef_event_handle_t = MSG*;
-    alias cef_window_handle_t = HWND;
-    alias cef_text_input_context_t = void*;
-
     struct cef_main_args_t {
-        HINSTANCE instance;
+        void* instance;
     }
 
     struct cef_window_info_t {
-        DWORD ex_style;
+        uint ex_style;
         cef_string_t window_name;
-        DWORD style;
+        uint style;
         int x;
         int y;
         int width;
         int height;
         cef_window_handle_t parent_window;
-        HMENU menu;
-        BOOL window_rendering_disabled;
-        BOOL transparent_painting;
+        void* menu;
+        int window_rendering_disabled;
+        int transparent_painting;
         cef_window_handle_t window;
+    }
+} else static if( Derleict_OS_Linux ) {
+    struct cef_main_args_t {
+        int argc;
+        char** argv;
+    }
+
+    struct cef_window_info_t {
+        cef_window_handle_t parent_widget;
+        int window_rendering_disabled;
+        int transparent_painting;
+        cef_window_handle_t widget;
+    }
+} else static if( Derleict_OS_Mac ) {
+    struct cef_main_args_t {
+        int argc;
+        char** argv;
+    }
+
+    struct cef_window_info_t {
+        cef_string_t window_name;
+        int x;
+        int y;
+        int width;
+        int height;
+        int hidden;
+        cef_window_handle_t parent_view;
+        int window_rendering_disabled;
+        int transparent_painting;
+        cef_window_handle_t view;
     }
 } else {
     static assert( 0, "Platform-specific types not yet implemented on this platform." );
@@ -876,6 +914,7 @@ struct cef_client_t {
         cef_load_handler_t* function( cef_client_t* ) get_load_handler;
         cef_render_handler_t* function( cef_client_t* ) get_render_handler;
         cef_request_handler_t* function( cef_client_t*) get_request_handler;
+        int function( cef_client_t*,cef_browser_t*,cef_process_id_t,cef_process_message_t* ) on_process_message_received;
     }
 }
 
