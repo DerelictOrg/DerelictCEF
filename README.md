@@ -3,7 +3,7 @@ DerelictCEF
 
 A dynamic binding to the [Chromium Embedded Framework][1] for the D Programming Language.
 
-Please see the pages [Building and Linking Derelict][2] and [Using Derelict][2], in the Derelict documentation, for information on how to build DerelictCEF and load libcef at run time. In the meantime, here's some sample code.
+Please see the pages [Building and Linking Derelict][2] and [Using Derelict][3], in the Derelict documentation, for information on how to build DerelictCEF and load libcef at run time. In the meantime, here's some sample code.
 
 ```D
 import derelict.cef.cef;
@@ -16,6 +16,6 @@ void main() {
     ...
 }
 ```
-[1]: http://derelictorg.github.io/compiling.html
-[2]: https://code.google.com/p/chromiumembedded/
-[3]: https://github.com/DerelictOrg/DerelictUtil/wiki/DerelictUtil-for-Users
+[1]: https://code.google.com/p/chromiumembedded/
+[2]: http://derelictorg.github.io/compiling.html
+[3]: https://code.google.com/p/chromiumembedded/
