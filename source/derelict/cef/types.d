@@ -735,7 +735,7 @@ static if( Derelict_OS_Windows ) {
         int transparent_painting;
         cef_window_handle_t window;
     }
-} else static if( Derleict_OS_Linux ) {
+} else static if( Derelict_OS_Linux ) {
     struct cef_main_args_t {
         int argc;
         char** argv;
@@ -747,7 +747,7 @@ static if( Derelict_OS_Windows ) {
         int transparent_painting;
         cef_window_handle_t widget;
     }
-} else static if( Derleict_OS_Mac ) {
+} else static if( Derelict_OS_Mac ) {
     struct cef_main_args_t {
         int argc;
         char** argv;
