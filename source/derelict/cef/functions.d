@@ -34,6 +34,11 @@ private {
 }
 
 extern( C ) @nogc nothrow {
+    // cef_logging_internal.h
+    alias da_cef_get_min_log_level = int function();
+    alias da_cef_get_vlog_level = int function( const( char )*, size_t );
+    alias da_cef_log = void function(const( char )*, int, int, const( char )* );
+    
     // cef_string_list.h
     alias da_cef_string_list_alloc = cef_string_list_t function();
     alias da_cef_string_list_size = int function( cef_string_list_t );
@@ -88,6 +93,8 @@ extern( C ) @nogc nothrow {
     alias da_cef_string_userfree_wide_free = void function( cef_string_userfree_wide_t );
     alias da_cef_string_userfree_utf8_free = void function( cef_string_userfree_utf8_t );
     alias da_cef_string_userfree_utf16_free = void function( cef_string_userfree_utf16_t );
+    alias da_cef_string_utf16_to_lower = int function( const( wchar )*, size_t, cef_string_utf16_t*);
+    alias da_cef_string_utf16_to_upper = int function( const( wchar )*, size_t, cef_string_utf16_t* );
 
     int cef_string_wide_copy(wchar_t* src, size_t srclen, cef_string_wide_t* output ) {
         return cef_string_wide_set( src, srclen, output, 1 );
@@ -142,6 +149,10 @@ extern( C ) @nogc nothrow {
         alias cef_string_from_wide = cef_string_wide_to_utf16;
     }
 
+    // cef_thread_internal.h
+    alias da_cef_get_current_platform_thread_id = cef_platform_thread_id_t function();
+    alias da_cef_get_current_platform_thread_handle = cef_platform_thread_handle_t function();
+
     // cef_time.h
     alias da_cef_time_to_timet = int function( const( cef_time_t )*,time_t* );
     alias da_cef_time_from_timet = int function( time_t,cef_time_t* );
@@ -150,13 +161,26 @@ extern( C ) @nogc nothrow {
     alias da_cef_time_now = int function( cef_time_t* );
     alias da_cef_time_delta = int function( const( cef_time_t )*,const( cef_time_t )*,long* );
 
+    // cef_trace_event_internal.h
+    alias da_cef_trace_event_instant = void function(const( char )*, const( char )*, const( char )*, ulong, const( char )*, ulong, int );
+    alias da_cef_trace_event_begin = void function(const( char )*, const( char )*, const( char )*, ulong, const( char )*, ulong, int );
+    alias da_cef_trace_event_end = void function(const( char )*, const( char )*, const( char )*, ulong, const( char )*, ulong, int );
+    alias da_cef_trace_counter = void function(const( char )*, const( char )*, const( char )*, ulong, const( char )*, ulong, int );
+    alias da_cef_trace_counter_id = void function(const( char )*, const( char )*, ulong, const( char )*, ulong, const( char )*, ulong, int);
+    alias da_cef_trace_event_async_begin = void function( const( char )*, const( char )*, ulong, const( char )*, ulong, const( char )*, ulong, int );
+    alias da_cef_trace_event_async_step_into = void function( const( char )*, const( char )*, ulong, ulong, const( char )*, ulong, int );
+    alias da_cef_trace_event_async_step_past = void function( const( char )*, const( char )*, ulong, ulong, const( char )*, ulong, int );
+    alias da_cef_trace_event_async_end = void function( const( char )*, const( char )*, ulong, const( char )*, ulong, const( char* ), ulong, int );
+
     // cef_app_capi.h
     alias da_cef_execute_process = int function( const( cef_main_args_t )*,cef_app_t*,void* );
     alias da_cef_initialize = int function( const( cef_main_args_t )*,cef_settings_t*,cef_app_t*,void* );
     alias da_cef_shutdown = void function();
     alias da_cef_do_message_loop_work = void function();
     alias da_cef_run_message_loop = void function();
+    alias da_cef_quit_message_loop = void function();
     alias da_cef_set_osmodal_loop = void function( int );
+    alias da_cef_enable_highdpi_support = void function();
 
     // cef_browser_capi.h
     alias da_cef_browser_host_create_browser = int function( const( cef_window_info_t)*,cef_client_t*,const( cef_string_t )*,const( cef_browser_settings_t )*,cef_request_context_t* );
@@ -170,16 +194,53 @@ extern( C ) @nogc nothrow {
     alias da_cef_cookie_manager_get_global_manager = cef_cookie_manager_t* function();
     alias da_cef_cookie_manager_create_manager = cef_cookie_manager_t* function( const( cef_string_t )*,int );
 
-    // cef_geolocation_capi.h
-    alias da_cef_get_geolocation = int function( cef_get_geolocation_callback_t* );
+    // cef_crash_util_capi.h
+    alias da_cef_crash_reporting_enabled = int function();
+    alias da_cef_set_crash_key_value = void function( const( cef_string_t )*, const( cef_string_t )* );
+
+    // cef_drag_data_capi.h
+    alias da_cef_drag_data_create = cef_drag_data_t* function();
+
+    // cef_file_util_capi.h
+    alias da_cef_create_directory = int function(const( cef_string_t )* );
+    alias da_cef_get_temp_directory = int function(cef_string_t* );
+    alias da_cef_create_new_temp_directory = int function(const( cef_string_t )* , cef_string_t* );
+    alias da_cef_create_temp_directory_in_directory = int function( const( cef_string_t )* , const( cef_string_t )* , cef_string_t* );
+    alias da_cef_directory_exists = int function(const( cef_string_t )* );
+    alias da_cef_delete_file = int function(const( cef_string_t )* , int );
+    alias da_cef_zip_directory = int function(const( cef_string_t )* , const( cef_string_t )* , int );
+    alias da_cef_load_crlsets_file = void function(const( cef_string_t )* );
+
+    // cef_image_capi.h
+    alias da_cef_image_create = cef_image_t* function();
+
+    // cef_menu_model_capi.h
+    alias da_cef_menu_model_create = cef_menu_model_t* function( cef_menu_model_delegate_t* );
 
     // cef_origin_whitelist_capi.h
     alias da_cef_add_cross_origin_whitelist_entry = int function( const( cef_string_t )*,const( cef_string_t )*,const( cef_string_t )*, int );
     alias da_cef_remove_cross_origin_whitelist_entry = int function( const( cef_string_t )*,const( cef_string_t )*,const( cef_string_t )*,int );
     alias da_cef_clear_cross_origin_whitelist = int function();
 
+    // cef_parser_capi.h
+    alias da_cef_parse_url = int function( const( cef_string_t )*, cef_urlparts_t* );
+    alias da_cef_create_url = int function( const( cef_urlparts_t )*, cef_string_t* );
+    alias da_cef_format_url_for_security_display = cef_string_userfree_t function( const( cef_string_t )* );
+    alias da_cef_get_mime_type = cef_string_userfree_t function( const( cef_string_t )* );
+    alias da_cef_get_extensions_for_mime_type = void function( const( cef_string_t )*, cef_string_list_t );
+    alias da_cef_base64encode = cef_string_userfree_t function( const( void )*, size_t );
+    alias da_cef_base64decode = cef_binary_value_t* function( const( cef_string_t )* );
+    alias da_cef_uriencode = cef_string_userfree_t function( const( cef_string_t )*, int );
+    alias da_cef_uridecode =  cef_string_userfree_t function( const( cef_string_t )*, int, cef_uri_unescape_rule_t );
+    alias da_cef_parse_json = cef_value_t* function( const( cef_string_t )*, cef_json_parser_options_t );
+    alias da_cef_parse_jsonand_return_error = cef_value_t* function( const( cef_string_t )*, cef_json_parser_options_t, cef_json_parser_error_t*, cef_string_t* );
+    alias da_cef_write_json = cef_string_userfree_t function( cef_value_t*, cef_json_writer_options_t );
+
     // cef_path_util_capi.h
     alias da_cef_get_path = int function( cef_path_key_t,cef_string_t* );
+
+    // cef_print_settings_capi.h
+    alias da_cef_print_settings_create = cef_print_settings_t* function();
 
     // cef_process_message_capi.h
     alias da_cef_process_message_create = cef_process_message_t* function( const( cef_string_t )* );
@@ -195,6 +256,10 @@ extern( C ) @nogc nothrow {
     // cef_request_context_capi.h
     alias da_cef_request_context_get_global_context = cef_request_context_t* function();
     alias da_cef_request_context_create_context = cef_request_context_t* function( cef_request_context_handler_t* );
+    alias da_cef_create_context_shared = cef_request_context_t* function( cef_request_context_t*, cef_request_context_handler_t* );
+
+    // cef_resource_bundle_capi.h
+    alias da_cef_resource_bundle_get_global = cef_resource_bundle_t* function();
 
     // cef_response_capi.h
     alias da_cef_response_create = cef_response_t* function();
@@ -202,6 +267,13 @@ extern( C ) @nogc nothrow {
     // cef_scheme_capi.h
     alias da_cef_register_scheme_handler_factory = int function( const( cef_string_t )*,const( cef_string_t )*,cef_scheme_handler_factory_t* );
     alias da_cef_clear_scheme_handler_factories = int function();
+
+    // cef_server_capi.h
+    alias da_cef_server_create = void function(const( cef_string_t )*, ushort, int, cef_server_handler_t* );
+
+    // cef_ssl_info_capi.h
+    alias da_cef_is_cert_status_error = int function( cef_cert_status_t );
+    alias da_cef_is_cert_status_minor_error = int function( cef_cert_status_t );
 
     // cef_stream_capi.h
     alias da_cef_stream_reader_create_for_file = cef_stream_reader_t* function( const( cef_string_t )* );
@@ -217,14 +289,13 @@ extern( C ) @nogc nothrow {
     alias da_cef_post_task = int function( cef_thread_id_t,cef_task_t* );
     alias da_cef_post_delayed_task = int function( cef_thread_id_t,cef_task_t*,int64 );
 
+    // cef_thread_capi.h
+    alias da_cef_thread_create = cef_thread_t* function( const( cef_string_t )*, cef_thread_priority_t, cef_message_loop_type_t, int, cef_com_init_mode_t );
+
     // cef_trace_capi.h
     alias da_cef_begin_tracing = int function( const( cef_string_t )* );
-    alias da_cef_end_tracing_async = int function( const( cef_string_t )*,cef_end_tracing_callback_t* );
+    alias da_cef_end_tracing = int function( const( cef_string_t )*,cef_end_tracing_callback_t* );
     alias da_cef_now_from_system_trace_time = int64 function();
-
-    // cef_url_capi.h
-    alias da_cef_parse_url = int function( const( cef_string_t )*,cef_urlparts_t* );
-    alias da_cef_create_url = int function( const( cef_urlparts_t )*,cef_string_t* );
 
     // cef_urlrequest_capi.h
     alias da_cef_urlrequest_create = cef_urlrequest_t* function( cef_request_t*,cef_urlrequest_client_t* );
@@ -243,34 +314,80 @@ extern( C ) @nogc nothrow {
     alias da_cef_v8value_create_string = cef_v8value_t* function( const( cef_string_t )* );
     alias da_cef_v8value_create_object = cef_v8value_t* function( cef_v8accessor_t* );
     alias da_cef_v8value_create_array = cef_v8value_t* function( int );
+    alias da_cef_v8value_create_array_buffer = cef_v8value_t* function( void*, size_t, cef_v8array_buffer_release_callback_t* );
     alias da_cef_v8value_create_function = cef_v8value_t* function( const( cef_string_t )*,cef_v8handler_t* );
     alias da_cef_v8stack_trace_get_current = cef_v8stack_trace_t* function( int );
     alias da_cef_register_extension = int function( const( cef_string_t )*,const( cef_string_t )*,cef_v8handler_t*);
 
     // cef_values_capi.h
+    alias da_cef_value_create = cef_value_t* function();
     alias da_cef_binary_value_create = cef_binary_value_t* function( const( void )*,size_t );
     alias da_cef_dictionary_value_create = cef_dictionary_value_t* function();
     alias da_cef_list_value_create = cef_list_value_t* function();
 
+    // cef_waitable_event_capi.h
+    alias da_cef_waitable_event_create = cef_waitable_event_t* function( int, int );
+
     // cef_web_plugin_capi.h
     alias da_cef_visit_web_plugin_info = void function( cef_web_plugin_info_visitor_t* );
     alias da_cef_refresh_web_plugins = void function();
-    alias da_cef_add_web_plugin_path = void function( const( cef_string_t )* );
-    alias da_cef_add_web_plugin_directory = void function( const( cef_string_t )* );
-    alias da_cef_remove_web_plugin_path = void function( const( cef_string_t )* );
     alias da_cef_unregister_internal_web_plugin = void function( const( cef_string_t )* );
-    alias da_cef_force_web_plugin_shutdown = void function( const( cef_string_t )* );
     alias da_cef_register_web_plugin_crash = void function( const( cef_string_t )* );
     alias da_cef_is_web_plugin_unstable = void function( const( cef_string_t )*,cef_web_plugin_unstable_callback_t* );
+    alias da_cef_register_widevine_cdm = void function( const( cef_string_t )*, cef_register_cdm_callback_t* );
 
     // cef_xml_reader_capi.h
     alias da_cef_xml_reader_create = cef_xml_reader_t* function( cef_stream_reader_t*,cef_xml_encoding_type_t,const( cef_string_t )* );
 
     // cef_zip_reader_capi.h
     alias da_cef_zip_reader_create = cef_zip_reader_t* function( cef_stream_reader_t* );
+
+    // test/cef_test_helpers_capi.h
+    alias da_cef_execute_java_script_with_user_gesture_for_tests = void function( cef_frame_t*, const( cef_string_t )* );
+
+    // test/cef_translator_test_capi.h
+    alias da_cef_translator_test_create = cef_translator_test_t* function();
+    alias da_cef_translator_test_ref_ptr_library_create = cef_translator_test_ref_ptr_library_t* function( int );
+    alias da_cef_translator_test_ref_ptr_library_child_create = cef_translator_test_ref_ptr_library_child_t* function( int , int );
+    alias da_cef_translator_test_ref_ptr_library_child_child_create = cef_translator_test_ref_ptr_library_child_child_t* function( int, int, int );
+    alias da_cef_translator_test_scoped_library_create = cef_translator_test_scoped_library_t* function( int );
+    alias da_cef_translator_test_scoped_library_child_create = cef_translator_test_scoped_library_child_t* function( int, int );
+    alias da_cef_translator_test_scoped_library_child_child_create = cef_translator_test_scoped_library_child_child_t* function( int, int, int );
+
+    // views/cef_browser_view_capi.h
+    alias da_cef_browser_view_create = cef_browser_view_t* function( cef_client_t*, const( cef_string_t ) *, const ( cef_browser_settings_t )*, cef_request_context_t*, cef_browser_view_delegate_t* );
+    alias da_cef_browser_view_get_for_browser = cef_browser_view_t* function( cef_browser_t* );
+
+    // views/cef_display_capi.h
+    alias da_cef_display_get_primary = cef_display_t* function();
+    alias da_cef_display_get_nearest_point = cef_display_t* function( const( cef_point_t )*, int );
+    alias da_cef_display_get_matching_bounds = cef_display_t* function( const( cef_rect_t )*, int );
+    alias da_cef_display_get_count = size_t function();
+    alias da_cef_display_get_alls = void function( size_t*, cef_display_t** );
+
+    // views/cef_label_button_capi.h
+    alias da_cef_label_button_create = cef_label_button_t* function( cef_button_delegate_t*, const( cef_string_t )*, int );
+
+    // views/cef_menu_button_capi.h
+    alias da_cef_menu_button_create = cef_menu_button_t* function( cef_menu_button_delegate_t*, const( cef_string_t )*, int );
+
+    // views/cef_panel_capi.h
+    alias da_cef_panel_create = cef_panel_t* function( cef_panel_delegate_t* );
+    
+    // views/cef_scroll_view_capi.h
+    alias da_cef_scroll_view_create = cef_scroll_view_t* function( cef_view_delegate_t* );
+    
+    // views/cef_scroll_view_capi.h
+    alias da_cef_textfield_create = cef_textfield_t* function( cef_textfield_delegate_t* );
+
+    // views/cef_window_capi.h
+    alias da_cef_window_create_top_level = cef_window_t* function( cef_window_delegate_t* );
 }
 
 __gshared {
+    da_cef_get_min_log_level cef_get_min_log_level;
+    da_cef_get_vlog_level cef_get_vlog_level;
+    da_cef_log cef_log;
     da_cef_string_list_alloc cef_string_list_alloc;
     da_cef_string_list_size cef_string_list_size;
     da_cef_string_list_value cef_string_list_value;
@@ -318,29 +435,69 @@ __gshared {
     da_cef_string_userfree_wide_free cef_string_userfree_wide_free;
     da_cef_string_userfree_utf8_free cef_string_userfree_utf8_free;
     da_cef_string_userfree_utf16_free cef_string_userfree_utf16_free;
+    da_cef_string_utf16_to_lower cef_string_utf16_to_lower;
+    da_cef_string_utf16_to_upper cef_string_utf16_to_upper;
+    da_cef_get_current_platform_thread_id cef_get_current_platform_thread_id;
+    da_cef_get_current_platform_thread_handle cef_get_current_platform_thread_handle;
     da_cef_time_to_timet cef_time_to_timet;
     da_cef_time_from_timet cef_time_from_timet;
     da_cef_time_to_doublet cef_time_to_doublet;
     da_cef_time_from_doublet cef_time_from_doublet;
     da_cef_time_now cef_time_now;
     da_cef_time_delta cef_time_delta;
+    da_cef_trace_event_instant cef_trace_event_instant;
+    da_cef_trace_event_begin cef_trace_event_begin;
+    da_cef_trace_event_end cef_trace_event_end;
+    da_cef_trace_counter cef_trace_counter;
+    da_cef_trace_counter_id cef_trace_counter_id;
+    da_cef_trace_event_async_begin cef_trace_event_async_begin;
+    da_cef_trace_event_async_step_into cef_trace_event_async_step_into;
+    da_cef_trace_event_async_step_past cef_trace_event_async_step_past;
+    da_cef_trace_event_async_end cef_trace_event_async_end;
     da_cef_execute_process cef_execute_process;
     da_cef_initialize cef_initialize;
     da_cef_shutdown cef_shutdown;
     da_cef_do_message_loop_work cef_do_message_loop_work;
     da_cef_run_message_loop cef_run_message_loop;
+    da_cef_quit_message_loop cef_quit_message_loop;
     da_cef_set_osmodal_loop cef_set_osmodal_loop;
+    da_cef_enable_highdpi_support cef_enable_highdpi_support;
     da_cef_browser_host_create_browser cef_browser_host_create_browser;
     da_cef_browser_host_create_browser_sync cef_browser_host_create_browser_sync;
     da_cef_command_line_create cef_command_line_create;
     da_cef_command_line_get_global cef_command_line_get_global;
     da_cef_cookie_manager_get_global_manager cef_cookie_manager_get_global_manager;
     da_cef_cookie_manager_create_manager cef_cookie_manager_create_manager;
-    da_cef_get_geolocation cef_get_geolocation;
+    da_cef_crash_reporting_enabled cef_crash_reporting_enabled;
+    da_cef_set_crash_key_value cef_set_crash_key_value;
+    da_cef_drag_data_create cef_drag_data_create;
+    da_cef_create_directory cef_create_directory;
+    da_cef_get_temp_directory cef_get_temp_directory;
+    da_cef_create_new_temp_directory cef_create_new_temp_directory;
+    da_cef_create_temp_directory_in_directory cef_create_temp_directory_in_directory;
+    da_cef_directory_exists cef_directory_exists;
+    da_cef_delete_file cef_delete_file;
+    da_cef_zip_directory cef_zip_directory;
+    da_cef_load_crlsets_file cef_load_crlsets_file;
+    da_cef_image_create cef_image_create;
+    da_cef_menu_model_create cef_menu_model_create;
     da_cef_add_cross_origin_whitelist_entry cef_add_cross_origin_whitelist_entry;
     da_cef_remove_cross_origin_whitelist_entry cef_remove_cross_origin_whitelist_entry;
     da_cef_clear_cross_origin_whitelist cef_clear_cross_origin_whitelist;
+    da_cef_parse_url cef_parse_url;
+    da_cef_create_url cef_create_url;
+    da_cef_format_url_for_security_display cef_format_url_for_security_display;
+    da_cef_get_mime_type cef_get_mime_type;
+    da_cef_get_extensions_for_mime_type cef_get_extensions_for_mime_type;
+    da_cef_base64encode cef_base64encode;
+    da_cef_base64decode cef_base64decode;
+    da_cef_uriencode cef_uriencode;
+    da_cef_uridecode cef_uridecode;
+    da_cef_parse_json cef_parse_json;
+    da_cef_parse_jsonand_return_error cef_parse_jsonand_return_error;
+    da_cef_write_json cef_write_json;
     da_cef_get_path cef_get_path;
+    da_cef_print_settings_create cef_print_settings_create;
     da_cef_process_message_create cef_process_message_create;
     da_cef_launch_process cef_launch_process;
     da_cef_request_create cef_request_create;
@@ -348,9 +505,14 @@ __gshared {
     da_cef_post_data_element_create cef_post_data_element_create;
     da_cef_request_context_get_global_context cef_request_context_get_global_context;
     da_cef_request_context_create_context cef_request_context_create_context;
+    da_cef_create_context_shared cef_create_context_shared;
+    da_cef_resource_bundle_get_global cef_resource_bundle_get_global;
     da_cef_response_create cef_response_create;
     da_cef_register_scheme_handler_factory cef_register_scheme_handler_factory;
     da_cef_clear_scheme_handler_factories cef_clear_scheme_handler_factories;
+    da_cef_server_create cef_server_create;
+    da_cef_is_cert_status_error cef_is_cert_status_error;
+    da_cef_is_cert_status_minor_error cef_is_cert_status_minor_error;
     da_cef_stream_reader_create_for_file cef_stream_reader_create_for_file;
     da_cef_stream_reader_create_for_data cef_stream_reader_create_for_data;
     da_cef_stream_reader_create_for_handler cef_stream_reader_create_for_handler;
@@ -361,11 +523,10 @@ __gshared {
     da_cef_currently_on cef_currently_on;
     da_cef_post_task cef_post_task;
     da_cef_post_delayed_task cef_post_delayed_task;
+    da_cef_thread_create cef_thread_create;
     da_cef_begin_tracing cef_begin_tracing;
-    da_cef_end_tracing_async cef_end_tracing_async;
+    da_cef_end_tracing cef_end_tracing;
     da_cef_now_from_system_trace_time cef_now_from_system_trace_time;
-    da_cef_parse_url cef_parse_url;
-    da_cef_create_url cef_create_url;
     da_cef_urlrequest_create cef_urlrequest_create;
     da_cef_v8context_get_current_context cef_v8context_get_current_context;
     da_cef_v8context_get_entered_context cef_v8context_get_entered_context;
@@ -380,21 +541,42 @@ __gshared {
     da_cef_v8value_create_string cef_v8value_create_string;
     da_cef_v8value_create_object cef_v8value_create_object;
     da_cef_v8value_create_array cef_v8value_create_array;
+    da_cef_v8value_create_array_buffer cef_v8value_create_array_buffer;    
     da_cef_v8value_create_function cef_v8value_create_function;
     da_cef_v8stack_trace_get_current cef_v8stack_trace_get_current;
     da_cef_register_extension cef_register_extension;
+    da_cef_value_create cef_value_create;
     da_cef_binary_value_create cef_binary_value_create;
     da_cef_dictionary_value_create cef_dictionary_value_create;
     da_cef_list_value_create cef_list_value_create;
+    da_cef_waitable_event_create cef_waitable_event_create;
     da_cef_visit_web_plugin_info cef_visit_web_plugin_info;
     da_cef_refresh_web_plugins cef_refresh_web_plugins;
-    da_cef_add_web_plugin_path cef_add_web_plugin_path;
-    da_cef_add_web_plugin_directory cef_add_web_plugin_directory;
-    da_cef_remove_web_plugin_path cef_remove_web_plugin_path;
     da_cef_unregister_internal_web_plugin cef_unregister_internal_web_plugin;
-    da_cef_force_web_plugin_shutdown cef_force_web_plugin_shutdown;
     da_cef_register_web_plugin_crash cef_register_web_plugin_crash;
     da_cef_is_web_plugin_unstable cef_is_web_plugin_unstable;
+    da_cef_register_widevine_cdm cef_register_widevine_cdm;
     da_cef_xml_reader_create cef_xml_reader_create;
     da_cef_zip_reader_create cef_zip_reader_create;
+    da_cef_execute_java_script_with_user_gesture_for_tests cef_execute_java_script_with_user_gesture_for_tests;
+    da_cef_translator_test_create cef_translator_test_create;
+    da_cef_translator_test_ref_ptr_library_create cef_translator_test_ref_ptr_library_create;
+    da_cef_translator_test_ref_ptr_library_child_create cef_translator_test_ref_ptr_library_child_create;
+    da_cef_translator_test_ref_ptr_library_child_child_create cef_translator_test_ref_ptr_library_child_child_create;
+    da_cef_translator_test_scoped_library_create cef_translator_test_scoped_library_create;
+    da_cef_translator_test_scoped_library_child_create cef_translator_test_scoped_library_child_create;
+    da_cef_translator_test_scoped_library_child_child_create cef_translator_test_scoped_library_child_child_create;
+    da_cef_browser_view_create cef_browser_view_create;
+    da_cef_browser_view_get_for_browser cef_browser_view_get_for_browser;
+    da_cef_display_get_primary cef_display_get_primary;
+    da_cef_display_get_nearest_point cef_display_get_nearest_point;
+    da_cef_display_get_matching_bounds cef_display_get_matching_bounds;
+    da_cef_display_get_count cef_display_get_count;
+    da_cef_display_get_alls cef_display_get_alls;
+    da_cef_label_button_create cef_label_button_create;
+    da_cef_menu_button_create cef_menu_button_create;
+    da_cef_panel_create cef_panel_create;
+    da_cef_scroll_view_create cef_scroll_view_create;
+    da_cef_textfield_create cef_textfield_create;
+    da_cef_window_create_top_level cef_window_create_top_level;
 }
