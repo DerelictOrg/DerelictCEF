@@ -107,10 +107,11 @@ alias cef_log_severity_t = int;
 enum {
     LOGSEVERITY_DEFAULT,
     LOGSEVERITY_VERBOSE,
+    LOGSEVERITY_DEBUG,
     LOGSEVERITY_INFO,
     LOGSEVERITY_WARNING,
     LOGSEVERITY_ERROR,
-    LOGSEVERITY_ERROR_REPORT,
+    LOGSEVERITY_FATAL,
     LOGSEVERITY_DISABLE = 99
 }
 
@@ -123,32 +124,47 @@ enum {
 
 struct cef_settings_t {
     size_t size;
-    int single_process;
     int no_sandbox;
     cef_string_t browser_subprocess_path;
+    cef_string_t framework_dir_path;
     int multi_threaded_message_loop;
+    int external_message_pump;
+    int windowless_rendering_enabled;
     int command_line_args_disabled;
     cef_string_t cache_path;
+    cef_string_t user_data_path;
     int persist_session_cookies;
+    int persist_user_preferences;
     cef_string_t user_agent;
     cef_string_t product_version;
     cef_string_t locale;
     cef_string_t log_file;
     cef_log_severity_t log_severity;
-    int release_dcheck_enabled;
     cef_string_t javascript_flags;
     cef_string_t resources_dir_path;
     cef_string_t locales_dir_path;
     int pack_loading_disabled;
     int remote_debugging_port;
     int uncaught_exception_stack_size;
-    int context_safety_implementation;
     int ignore_certificate_errors;
-    cef_color_t backtround_color;
+    int enable_net_security_expiration;
+    cef_color_t background_color;
+    cef_string_t accept_language_list;
+}
+
+struct cef_request_context_settings_t {
+    size_t size;
+    cef_string_t cache_path;
+    int persist_session_cookies;
+    int persist_user_preferences;
+    int ignore_certificate_errors;
+    int enable_net_security_expiration;
+    cef_string_t accept_language_list;
 }
 
 struct cef_browser_settings_t {
     size_t size;
+    int windowless_frame_rate;
     cef_string_t standard_font_family;
     cef_string_t fixed_font_family;
     cef_string_t serif_font_family;
@@ -162,12 +178,9 @@ struct cef_browser_settings_t {
     cef_string_t default_encoding;
     cef_state_t remote_fonts;
     cef_state_t javascript;
-    cef_state_t javascript_open_windows;
     cef_state_t javascript_close_windows;
     cef_state_t javascript_access_clipboard;
     cef_state_t javascript_dom_paste;
-    cef_state_t caret_browsing;
-    cef_state_t java;
     cef_state_t plugins;
     cef_state_t universal_access_from_file_urls;
     cef_state_t file_access_from_file_urls;
@@ -180,8 +193,15 @@ struct cef_browser_settings_t {
     cef_state_t databases;
     cef_state_t application_cache;
     cef_state_t webgl;
-    cef_state_t accelerated_compositing;
     cef_color_t background_color;
+    cef_string_t accept_language_list;
+}
+
+alias cef_return_value_t = int;
+enum {
+    RV_CANCEL = 0,
+    RV_CONTINUE,
+    RV_CONTINUE_ASYNC,
 }
 
 struct cef_urlparts_t {
@@ -214,6 +234,7 @@ enum {
     TS_ABNORMAL_TERMINATION,
     TS_PROCESS_WAS_KILLED,
     TS_PROCESS_CRASHED,
+    TS_PROCESS_OOM,
 }
 
 alias cef_path_key_t = int;
@@ -224,6 +245,9 @@ enum {
     PK_DIR_TEMP,
     PK_FILE_EXE,
     PK_FILE_MODULE,
+    PK_LOCAL_APP_DATA,
+    PK_USER_DATA,
+    PK_DIR_RESOURCES,
 }
 
 alias cef_storage_type_t = int;
@@ -285,6 +309,43 @@ enum {
     ERR_INSECURE_RESPONSE = -501,
 }
 
+alias cef_cert_status_t = int;
+enum {
+    CERT_STATUS_NONE = 0,
+    CERT_STATUS_COMMON_NAME_INVALID = 1 << 0,
+    CERT_STATUS_DATE_INVALID = 1 << 1,
+    CERT_STATUS_AUTHORITY_INVALID = 1 << 2,
+    CERT_STATUS_NO_REVOCATION_MECHANISM = 1 << 4,
+    CERT_STATUS_UNABLE_TO_CHECK_REVOCATION = 1 << 5,
+    CERT_STATUS_REVOKED = 1 << 6,
+    CERT_STATUS_INVALID = 1 << 7,
+    CERT_STATUS_WEAK_SIGNATURE_ALGORITHM = 1 << 8,
+    CERT_STATUS_NON_UNIQUE_NAME = 1 << 10,
+    CERT_STATUS_WEAK_KEY = 1 << 11,
+    CERT_STATUS_PINNED_KEY_MISSING = 1 << 13,
+    CERT_STATUS_NAME_CONSTRAINT_VIOLATION = 1 << 14,
+    CERT_STATUS_VALIDITY_TOO_LONG = 1 << 15,
+    CERT_STATUS_IS_EV = 1 << 16,
+    CERT_STATUS_REV_CHECKING_ENABLED = 1 << 17,
+    CERT_STATUS_SHA1_SIGNATURE_PRESENT = 1 << 19,
+    CERT_STATUS_CT_COMPLIANCE_FAILED = 1 << 20,
+}
+
+alias cef_window_open_disposition_t = int;
+enum {
+    WOD_UNKNOWN,
+    WOD_CURRENT_TAB,
+    WOD_SINGLETON_TAB,
+    WOD_NEW_FOREGROUND_TAB,
+    WOD_NEW_BACKGROUND_TAB,
+    WOD_NEW_POPUP,
+    WOD_NEW_WINDOW,
+    WOD_SAVE_TO_DISK,
+    WOD_OFF_THE_RECORD,
+    WOD_IGNORE_ACTION
+}
+
+
 alias cef_drag_operations_mask_t = int;
 enum {
     DRAG_OPERATION_NONE = 0,
@@ -322,7 +383,7 @@ enum {
 
 alias cef_resource_type_t = int;
 enum {
-    RT_MAIN_FRAME,
+    RT_MAIN_FRAME = 0,
     RT_SUB_FRAME,
     RT_STYLESHEET,
     RT_SCRIPT,
@@ -332,9 +393,14 @@ enum {
     RT_OBJECT,
     RT_MEDIA,
     RT_WORKER,
+    RT_SHARED_WORKER,
     RT_PREFETCH,
     RT_FAVICON,
     RT_XHR,
+    RT_PING,
+    RT_SERVICE_WORKER,
+    RT_CSP_REPORT,
+    RT_PLUGIN_RESOURCE,
 }
 
 alias cef_transition_type_t = int;
@@ -359,14 +425,13 @@ enum {
 alias cef_urlrequest_flags_t = int;
 enum {
     UR_FLAG_NONE = 0,
-    UR_FLAG_SKIP_CACHE = 1<<0,
-    UR_FLAG_ALLOW_CACHED_CREDENTIALS = 1<<1,
-    UR_FLAG_ALLOW_COOKIES = 1<<2,
-    UR_FLAG_REPORT_UPLOAD_PROGRESS = 1<<3,
-    UR_FLAG_REPORT_LOAD_TIMING = 1<<4,
-    UR_FLAG_REPORT_RAW_HEADERS = 1<<5,
-    UR_FLAG_NO_DOWNLOAD_DATA = 1<<6,
-    UR_FLAG_NO_RETRY_ON_5XX = 1<<7,
+    UR_FLAG_SKIP_CACHE = 1 << 0,
+    UR_FLAG_ONLY_FROM_CACHE = 1 << 1,
+    UR_FLAG_ALLOW_STORED_CREDENTIALS = 1 << 2,
+    UR_FLAG_REPORT_UPLOAD_PROGRESS = 1 << 3,
+    UR_FLAG_NO_DOWNLOAD_DATA = 1 << 4,
+    UR_FLAG_NO_RETRY_ON_5XX = 1 << 5,
+    UR_FLAG_STOP_ON_REDIRECT = 1 << 6,
 }
 
 alias cef_urlrequest_status_t = int;
@@ -378,11 +443,38 @@ enum {
     UR_FAILED,
 }
 
+struct cef_point_t {
+    int x;
+    int y;
+}
+
 struct cef_rect_t {
     int x;
     int y;
     int width;
     int height;
+}
+
+struct cef_size_t {
+    int width;
+    int height;
+}
+
+struct cef_range_t {
+    int from;
+    int to;
+}
+
+struct cef_insets_t {
+  int top;
+  int left;
+  int bottom;
+  int right;
+}
+
+struct cef_draggable_region_t {
+    cef_rect_t bounds;
+    int draggable;
 }
 
 alias cef_process_id_t = int;
@@ -401,6 +493,28 @@ enum {
     TID_CACHE,
     TID_IO,
     TID_RENDERER,
+}
+
+alias cef_thread_priority_t = int;
+enum {
+    TP_BACKGROUND,
+    TP_NORMAL,
+    TP_DISPLAY,
+    TP_REALTIME_AUDIO,
+}
+
+alias cef_message_loop_type_t = int;
+enum {
+    ML_TYPE_DEFAULT,
+    ML_TYPE_UI,
+    ML_TYPE_IO,
+}
+
+alias cef_com_init_mode_t = int;
+enum {
+    COM_INIT_MODE_NONE,
+    COM_INIT_MODE_STA,
+    COM_INIT_MODE_MTA,
 }
 
 alias cef_value_type_t = int;
@@ -434,23 +548,33 @@ struct cef_screen_info_t {
 
 alias cef_menu_id_t = int;
 enum {
-  MENU_ID_BACK = 100,
-  MENU_ID_FORWARD = 101,
-  MENU_ID_RELOAD = 102,
-  MENU_ID_RELOAD_NOCACHE = 103,
-  MENU_ID_STOPLOAD = 104,
-  MENU_ID_UNDO = 110,
-  MENU_ID_REDO = 111,
-  MENU_ID_CUT = 112,
-  MENU_ID_COPY = 113,
-  MENU_ID_PASTE = 114,
-  MENU_ID_DELETE = 115,
-  MENU_ID_SELECT_ALL = 116,
-  MENU_ID_FIND = 130,
-  MENU_ID_PRINT = 131,
-  MENU_ID_VIEW_SOURCE = 132,
-  MENU_ID_USER_FIRST = 26500,
-  MENU_ID_USER_LAST = 28500,
+    MENU_ID_BACK = 100,
+    MENU_ID_FORWARD = 101,
+    MENU_ID_RELOAD = 102,
+    MENU_ID_RELOAD_NOCACHE = 103,
+    MENU_ID_STOPLOAD = 104,
+    MENU_ID_UNDO = 110,
+    MENU_ID_REDO = 111,
+    MENU_ID_CUT = 112,
+    MENU_ID_COPY = 113,
+    MENU_ID_PASTE = 114,
+    MENU_ID_DELETE = 115,
+    MENU_ID_SELECT_ALL = 116,
+    MENU_ID_FIND = 130,
+    MENU_ID_PRINT = 131,
+    MENU_ID_VIEW_SOURCE = 132,
+    MENU_ID_SPELLCHECK_SUGGESTION_0 = 200,
+    MENU_ID_SPELLCHECK_SUGGESTION_1 = 201,
+    MENU_ID_SPELLCHECK_SUGGESTION_2 = 202,
+    MENU_ID_SPELLCHECK_SUGGESTION_3 = 203,
+    MENU_ID_SPELLCHECK_SUGGESTION_4 = 204,
+    MENU_ID_SPELLCHECK_SUGGESTION_LAST = 204,
+    MENU_ID_NO_SPELLING_SUGGESTIONS = 205,
+    MENU_ID_ADD_TO_DICTIONARY = 206,
+    MENU_ID_CUSTOM_FIRST = 220,
+    MENU_ID_CUSTOM_LAST = 250,
+    MENU_ID_USER_FIRST = 26500,
+    MENU_ID_USER_LAST = 28500,
 }
 
 alias cef_mouse_button_type_t = int;
@@ -619,12 +743,7 @@ struct cef_popup_features_t {
     int menuBarVisible;
     int statusBarVisible;
     int toolBarVisible;
-    int locationBarVisible;
     int scrollbarsVisible;
-    int resizable;
-    int fullscreen;
-    int dialog;
-    cef_string_list_t additionalFeatures;
 }
 
 alias cef_dom_document_type_t = int;
@@ -654,7 +773,6 @@ enum {
     DOM_EVENT_CATEGORY_POPSTATE = 0x2000,
     DOM_EVENT_CATEGORY_PROGRESS = 0x4000,
     DOM_EVENT_CATEGORY_XMLHTTPREQUEST_PROGRESS = 0x8000,
-    DOM_EVENT_CATEGORY_BEFORE_LOAD = 0x10000,
 }
 
 alias cef_dom_event_phase_t = int;
@@ -672,42 +790,332 @@ enum {
     DOM_NODE_TYPE_ATTRIBUTE,
     DOM_NODE_TYPE_TEXT,
     DOM_NODE_TYPE_CDATA_SECTION,
-    DOM_NODE_TYPE_ENTITY,
     DOM_NODE_TYPE_PROCESSING_INSTRUCTIONS,
     DOM_NODE_TYPE_COMMENT,
     DOM_NODE_TYPE_DOCUMENT,
     DOM_NODE_TYPE_DOCUMENT_TYPE,
-    DOM_NODE_TYPE_DOCUMENT_FRAGMENT,
-    DOM_NODE_TYPE_NOTATION,
-    DOM_NODE_TYPE_XPATH_NAMESPACE,
+    DOM_NODE_TYPE_DOCUMENT_FRAGMENT
 }
 
 alias cef_file_dialog_mode_t = int;
 enum {
     FILE_DIALOG_OPEN,
     FILE_DIALOG_OPEN_MULTIPLE,
+    FILE_DIALOG_OPEN_FOLDER,
     FILE_DIALOG_SAVE,
+    FILE_DIALOG_TYPE_MASK = 0xFF,
+    FILE_DIALOG_OVERWRITEPROMPT_FLAG = 0x01000000,
+    FILE_DIALOG_HIDEREADONLY_FLAG = 0x02000000,
 }
 
-alias cef_geoposition_error_code_t = int;
+alias cef_color_model_t = int;
 enum {
-    GEOPOSITION_ERROR_NONE = 0,
-    GEOPOSITION_ERROR_PERMISSION_DENIED,
-    GEOPOSITION_ERROR_POSITION_UNAVAILABLE,
-    GEOPOSITION_ERROR_TIMEOUT,
+    COLOR_MODEL_UNKNOWN,
+    COLOR_MODEL_GRAY,
+    COLOR_MODEL_COLOR,
+    COLOR_MODEL_CMYK,
+    COLOR_MODEL_CMY,
+    COLOR_MODEL_KCMY,
+    COLOR_MODEL_CMY_K,  // CMY_K represents CMY+K.
+    COLOR_MODEL_BLACK,
+    COLOR_MODEL_GRAYSCALE,
+    COLOR_MODEL_RGB,
+    COLOR_MODEL_RGB16,
+    COLOR_MODEL_RGBA,
+    COLOR_MODEL_COLORMODE_COLOR,              // Used in samsung printer ppds.
+    COLOR_MODEL_COLORMODE_MONOCHROME,         // Used in samsung printer ppds.
+    COLOR_MODEL_HP_COLOR_COLOR,               // Used in HP color printer ppds.
+    COLOR_MODEL_HP_COLOR_BLACK,               // Used in HP color printer ppds.
+    COLOR_MODEL_PRINTOUTMODE_NORMAL,          // Used in foomatic ppds.
+    COLOR_MODEL_PRINTOUTMODE_NORMAL_GRAY,     // Used in foomatic ppds.
+    COLOR_MODEL_PROCESSCOLORMODEL_CMYK,       // Used in canon printer ppds.
+    COLOR_MODEL_PROCESSCOLORMODEL_GREYSCALE,  // Used in canon printer ppds.
+    COLOR_MODEL_PROCESSCOLORMODEL_RGB,        // Used in canon printer ppds
 }
 
-struct cef_geoposition_t {
-    double latitude;
-    double longitude;
-    double altitude;
-    double accuracy;
-    double altitude_accuracy;
-    double heading;
-    double speed;
-    cef_time_t timestamp;
-    cef_geoposition_error_code_t error_code;
-    cef_string_t error_message;
+alias cef_duplex_mode_t = int;
+enum {
+    DUPLEX_MODE_UNKNOWN = -1,
+    DUPLEX_MODE_SIMPLEX,
+    DUPLEX_MODE_LONG_EDGE,
+    DUPLEX_MODE_SHORT_EDGE,
+}
+
+alias cef_cursor_type_t = int;
+enum {
+    CT_POINTER = 0,
+    CT_CROSS,
+    CT_HAND,
+    CT_IBEAM,
+    CT_WAIT,
+    CT_HELP,
+    CT_EASTRESIZE,
+    CT_NORTHRESIZE,
+    CT_NORTHEASTRESIZE,
+    CT_NORTHWESTRESIZE,
+    CT_SOUTHRESIZE,
+    CT_SOUTHEASTRESIZE,
+    CT_SOUTHWESTRESIZE,
+    CT_WESTRESIZE,
+    CT_NORTHSOUTHRESIZE,
+    CT_EASTWESTRESIZE,
+    CT_NORTHEASTSOUTHWESTRESIZE,
+    CT_NORTHWESTSOUTHEASTRESIZE,
+    CT_COLUMNRESIZE,
+    CT_ROWRESIZE,
+    CT_MIDDLEPANNING,
+    CT_EASTPANNING,
+    CT_NORTHPANNING,
+    CT_NORTHEASTPANNING,
+    CT_NORTHWESTPANNING,
+    CT_SOUTHPANNING,
+    CT_SOUTHEASTPANNING,
+    CT_SOUTHWESTPANNING,
+    CT_WESTPANNING,
+    CT_MOVE,
+    CT_VERTICALTEXT,
+    CT_CELL,
+    CT_CONTEXTMENU,
+    CT_ALIAS,
+    CT_PROGRESS,
+    CT_NODROP,
+    CT_COPY,
+    CT_NONE,
+    CT_NOTALLOWED,
+    CT_ZOOMIN,
+    CT_ZOOMOUT,
+    CT_GRAB,
+    CT_GRABBING,
+    CT_CUSTOM,
+}
+
+struct cef_cursor_info_t {
+    cef_point_t hotspot;
+    float image_scale_factor;
+    void* buffer;
+    cef_size_t size;
+}
+
+alias cef_uri_unescape_rule_t = int;
+enum {
+    UU_NONE = 0,
+    UU_NORMAL = 1 << 0,
+    UU_SPACES = 1 << 1,
+    UU_PATH_SEPARATORS = 1 << 2,
+    UU_URL_SPECIAL_CHARS_EXCEPT_PATH_SEPARATORS = 1 << 3,
+    UU_SPOOFING_AND_CONTROL_CHARS = 1 << 4,
+    UU_REPLACE_PLUS_WITH_SPACE = 1 << 5,
+}
+
+alias cef_json_parser_options_t = int;
+enum {
+    JSON_PARSER_RFC = 0,
+    JSON_PARSER_ALLOW_TRAILING_COMMAS = 1 << 0,
+}
+
+alias cef_json_parser_error_t = int;
+enum {
+    JSON_NO_ERROR = 0,
+    JSON_INVALID_ESCAPE,
+    JSON_SYNTAX_ERROR,
+    JSON_UNEXPECTED_TOKEN,
+    JSON_TRAILING_COMMA,
+    JSON_TOO_MUCH_NESTING,
+    JSON_UNEXPECTED_DATA_AFTER_ROOT,
+    JSON_UNSUPPORTED_ENCODING,
+    JSON_UNQUOTED_DICTIONARY_KEY,
+    JSON_PARSE_ERROR_COUNT
+}
+
+alias cef_json_writer_options_t = int;
+enum {
+    JSON_WRITER_DEFAULT = 0,
+    JSON_WRITER_OMIT_BINARY_VALUES = 1 << 0,
+    JSON_WRITER_OMIT_DOUBLE_TYPE_PRESERVATION = 1 << 1,
+    JSON_WRITER_PRETTY_PRINT = 1 << 2,
+}
+
+alias cef_pdf_print_margin_type_t = int;
+enum {
+    PDF_PRINT_MARGIN_DEFAULT,
+    PDF_PRINT_MARGIN_NONE,
+    PDF_PRINT_MARGIN_MINIMUM,
+    PDF_PRINT_MARGIN_CUSTOM,
+}
+
+struct cef_pdf_print_settings_t {
+    cef_string_t header_footer_title;
+    cef_string_t header_footer_url;
+    int page_width;
+    int page_height;
+    int scale_factor;
+    double margin_top;
+    double margin_right;
+    double margin_bottom;
+    double margin_left;
+    cef_pdf_print_margin_type_t margin_type;
+    int header_footer_enabled;
+    int selection_only;
+    int landscape;
+    int backgrounds_enabled;
+}
+
+alias cef_scale_factor_t = int;
+enum {
+    SCALE_FACTOR_NONE = 0,
+    SCALE_FACTOR_100P,
+    SCALE_FACTOR_125P,
+    SCALE_FACTOR_133P,
+    SCALE_FACTOR_140P,
+    SCALE_FACTOR_150P,
+    SCALE_FACTOR_180P,
+    SCALE_FACTOR_200P,
+    SCALE_FACTOR_250P,
+    SCALE_FACTOR_300P,
+}
+
+alias cef_plugin_policy_t = int;
+enum {
+    PLUGIN_POLICY_ALLOW,
+    PLUGIN_POLICY_DETECT_IMPORTANT,
+    PLUGIN_POLICY_BLOCK,
+    PLUGIN_POLICY_DISABLE,
+}
+
+alias cef_referrer_policy_t = int;
+enum {
+    REFERRER_POLICY_CLEAR_REFERRER_ON_TRANSITION_FROM_SECURE_TO_INSECURE,
+    REFERRER_POLICY_DEFAULT,
+    REFERRER_POLICY_REDUCE_REFERRER_GRANULARITY_ON_TRANSITION_CROSS_ORIGIN,
+    REFERRER_POLICY_ORIGIN_ONLY_ON_TRANSITION_CROSS_ORIGIN,
+    REFERRER_POLICY_NEVER_CLEAR_REFERRER,
+    REFERRER_POLICY_ORIGIN,
+    REFERRER_POLICY_CLEAR_REFERRER_ON_TRANSITION_CROSS_ORIGIN,
+    REFERRER_POLICY_ORIGIN_CLEAR_ON_TRANSITION_FROM_SECURE_TO_INSECURE,
+    REFERRER_POLICY_NO_REFERRER,
+    REFERRER_POLICY_LAST_VALUE,
+}
+
+alias cef_response_filter_status_t = int;
+enum {
+    RESPONSE_FILTER_NEED_MORE_DATA,
+    RESPONSE_FILTER_DONE,
+    RESPONSE_FILTER_ERROR
+}
+
+alias cef_color_type_t = int;
+enum {
+    CEF_COLOR_TYPE_RGBA_8888,
+    CEF_COLOR_TYPE_BGRA_8888,
+}
+
+alias cef_alpha_type_t = int;
+enum {
+    CEF_ALPHA_TYPE_OPAQUE,
+    CEF_ALPHA_TYPE_PREMULTIPLIED,
+    CEF_ALPHA_TYPE_POSTMULTIPLIED,
+}
+
+alias cef_text_style_t = int;
+enum {
+    CEF_TEXT_STYLE_BOLD,
+    CEF_TEXT_STYLE_ITALIC,
+    CEF_TEXT_STYLE_STRIKE,
+    CEF_TEXT_STYLE_DIAGONAL_STRIKE,
+    CEF_TEXT_STYLE_UNDERLINE,
+}
+
+alias cef_main_axis_alignment_t = int;
+enum {
+    CEF_MAIN_AXIS_ALIGNMENT_START,
+    CEF_MAIN_AXIS_ALIGNMENT_CENTER,
+    CEF_MAIN_AXIS_ALIGNMENT_END,
+}
+
+alias cef_cross_axis_alignment_t = int;
+enum {
+    CEF_CROSS_AXIS_ALIGNMENT_STRETCH,
+    CEF_CROSS_AXIS_ALIGNMENT_START,
+    CEF_CROSS_AXIS_ALIGNMENT_CENTER,
+    CEF_CROSS_AXIS_ALIGNMENT_END,
+}
+
+struct cef_box_layout_settings_t {
+    int horizontal;
+    int inside_border_horizontal_spacing;
+    int inside_border_vertical_spacing;
+    cef_insets_t inside_border_insets;
+    int between_child_spacing;
+    cef_main_axis_alignment_t main_axis_alignment;
+    cef_cross_axis_alignment_t cross_axis_alignment;
+    int minimum_cross_axis_size;
+    int default_flex;
+}
+
+alias cef_button_state_t = int;
+enum {
+    CEF_BUTTON_STATE_NORMAL,
+    CEF_BUTTON_STATE_HOVERED,
+    CEF_BUTTON_STATE_PRESSED,
+    CEF_BUTTON_STATE_DISABLED,
+}
+
+alias cef_horizontal_alignment_t = int;
+enum {
+    CEF_HORIZONTAL_ALIGNMENT_LEFT,
+    CEF_HORIZONTAL_ALIGNMENT_CENTER,
+    CEF_HORIZONTAL_ALIGNMENT_RIGHT,
+}
+
+alias cef_menu_anchor_position_t = int;
+enum {
+  CEF_MENU_ANCHOR_TOPLEFT,
+  CEF_MENU_ANCHOR_TOPRIGHT,
+  CEF_MENU_ANCHOR_BOTTOMCENTER,
+}
+
+alias cef_menu_color_type_t = int;
+enum {
+    CEF_MENU_COLOR_TEXT,
+    CEF_MENU_COLOR_TEXT_HOVERED,
+    CEF_MENU_COLOR_TEXT_ACCELERATOR,
+    CEF_MENU_COLOR_TEXT_ACCELERATOR_HOVERED,
+    CEF_MENU_COLOR_BACKGROUND,
+    CEF_MENU_COLOR_BACKGROUND_HOVERED,
+    CEF_MENU_COLOR_COUNT,
+}
+
+alias cef_ssl_version_t = int;
+enum {
+    SSL_CONNECTION_VERSION_UNKNOWN = 0,
+    SSL_CONNECTION_VERSION_SSL2 = 1,
+    SSL_CONNECTION_VERSION_SSL3 = 2,
+    SSL_CONNECTION_VERSION_TLS1 = 3,
+    SSL_CONNECTION_VERSION_TLS1_1 = 4,
+    SSL_CONNECTION_VERSION_TLS1_2 = 5,
+    SSL_CONNECTION_VERSION_QUIC = 7,
+}
+
+alias cef_ssl_content_status_t = int;
+enum {
+    SSL_CONTENT_NORMAL_CONTENT = 0,
+    SSL_CONTENT_DISPLAYED_INSECURE_CONTENT = 1 << 0,
+    SSL_CONTENT_RAN_INSECURE_CONTENT = 1 << 1,
+}
+
+alias cef_cdm_registration_error_t = int;
+enum {
+    CEF_CDM_REGISTRATION_ERROR_NONE,
+    CEF_CDM_REGISTRATION_ERROR_INCORRECT_CONTENTS,
+    CEF_CDM_REGISTRATION_ERROR_INCOMPATIBLE,
+    CEF_CDM_REGISTRATION_ERROR_NOT_SUPPORTED,
+}
+
+struct cef_composition_underline_t {
+    cef_range_t range;
+    cef_color_t color;
+    cef_color_t background_color;
+    int thick;
 }
 
 // cef_types_win.h
@@ -769,6 +1177,15 @@ static if( Derelict_OS_Windows ) {
     static assert( 0, "Platform-specific types not yet implemented on this platform." );
 }
 
+// cef_accessibility_handler_capi.h
+struct cef_accessibility_handler_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_accessibility_handler_t* , cef_value_t* ) on_accessibility_tree_change;
+        void function( cef_accessibility_handler_t*, cef_value_t* ) on_accessibility_location_change;
+    }
+}
+
 // cef_app_capi.h
 struct cef_app_t {
     cef_base_t base;
@@ -785,7 +1202,7 @@ struct cef_app_t {
 struct cef_auth_callback_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
-        void function( cef_auth_callback_t*,const( cef_string_t )*,const( cef_string_t )* ) cont;
+        void function( cef_auth_callback_t*, const( cef_string_t )*, const( cef_string_t )* ) cont;
         void function( cef_auth_callback_t* ) cancel;
     }
 }
@@ -796,11 +1213,28 @@ struct cef_base_t {
     extern( System ) @nogc nothrow {
         int function( cef_base_t* ) add_ref;
         int function( cef_base_t* ) release;
-        int function( cef_base_t* ) get_refct;
+        int function( cef_base_t* ) has_one_ref;
+        int function( cef_base_t* ) has_at_least_one_ref;
     }
 }
 
+struct cef_base_scoped_t {
+    size_t size;
+    extern( System ) @nogc nothrow void function( cef_base_scoped_t* ) del;
+}
+
 // cef_browser_capi.h
+static if( Derelict_OS_Windows ) {
+    alias cef_platform_thread_id_t = uint;
+    alias cef_platform_thread_handle_t = uint;
+} else static if( Derelict_OS_Posix ) {
+    import core.sys.posix.unistd: pid_t;
+    alias cef_platform_thread_id_t = pid_t;
+    alias cef_platform_thread_handle_t = pid_t;
+} else {
+    static assert( 0, "Platform-specific types not yet implemented on this platform." );
+}
+
 struct cef_browser_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
@@ -833,43 +1267,80 @@ struct cef_run_file_dialog_callback_t {
     extern( System ) @nogc nothrow void function( cef_run_file_dialog_callback_t*,cef_browser_host_t*,cef_string_list_t ) cont;
 }
 
+struct cef_navigation_entry_visitor_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow int function( cef_navigation_entry_visitor_t*, cef_navigation_entry_t*, int, int, int ) visit;
+}
+
+struct cef_pdf_print_callback_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow void function( cef_pdf_print_callback_t*, const( cef_string_t )*, int ) on_pdf_print_finished;
+}
+
+struct cef_download_image_callback_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow void function( cef_download_image_callback_t*, const( cef_string_t )*, int, cef_image_t* ) on_download_image_finished;
+}
+
 struct cef_browser_host_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
         cef_browser_t* function( cef_browser_host_t* ) get_browser;
-        void function( cef_browser_host_t* ) parent_window_will_close;
-        void function( cef_browser_host_t*,int ) close_browser;
-        void function( cef_browser_host_t*,int ) set_focus;
-        void function( cef_browser_host_t*,int ) set_window_visibility;
+        void function( cef_browser_host_t*, int ) close_browser;
+        int function( cef_browser_host_t* ) try_close_browser;
+        void function( cef_browser_host_t*, int ) set_focus;
         cef_window_handle_t function( cef_browser_host_t* ) get_window_handle;
         cef_window_handle_t function( cef_browser_host_t* ) get_opener_window_handle;
+        int function( cef_browser_host_t* ) has_view;
         cef_client_t* function( cef_browser_host_t* ) get_client;
         cef_request_context_t* function( cef_browser_host_t* ) get_request_context;
-        double function( cef_browser_host_t*) get_zoom_level;
-        void function( cef_browser_host_t* ) set_zoom_level;
-        void function( cef_browser_host_t*,cef_file_dialog_mode_t,const( cef_string_t )*,const( cef_string_t )*,cef_string_list_t,cef_run_file_dialog_callback_t* ) run_file_dialog;
-        void function( cef_browser_host_t*,const( cef_string_t )* ) start_download;
+        double function( cef_browser_host_t* ) get_zoom_level;
+        void function( cef_browser_host_t*, double ) set_zoom_level;
+        void function( cef_browser_host_t*, cef_file_dialog_mode_t, const( cef_string_t )*, const( cef_string_t )*, cef_string_list_t, int, cef_run_file_dialog_callback_t* ) run_file_dialog;
+        void function( cef_browser_host_t*, const( cef_string_t )* ) start_download;
+        void function( cef_browser_host_t*, const( cef_string_t )*, int, uint32, int, cef_download_image_callback_t* ) download_image;
         void function( cef_browser_host_t* ) print;
-        void function( cef_browser_host_t*,int,const( cef_string_t )*,int,int,int ) find;
-        void function( cef_browser_host_t*,int ) stop_finding;
-        void function( cef_browser_host_t*,const( cef_window_info_t )*,cef_client_t*,const( cef_browser_settings_t)* ) show_dev_tools;
+        void function( cef_browser_host_t*, const( cef_string_t )*, const( cef_pdf_print_settings_t )* settings, cef_pdf_print_callback_t* ) print_to_pdf;
+        void function( cef_browser_host_t*, int, const( cef_string_t )*, int, int, int ) find;
+        void function( cef_browser_host_t*, int ) stop_finding;
+        void function( cef_browser_host_t*, const( cef_window_info_t )*, cef_client_t*, const( cef_browser_settings_t )*, const( cef_point_t )* ) show_dev_tools;
         void function( cef_browser_host_t* ) close_dev_tools;
-        void function( cef_browser_host_t*,int ) set_mouse_cursor_change_disabled;
+        int function( cef_browser_host_t* ) has_dev_tools;
+        void function( cef_browser_host_t*, cef_navigation_entry_visitor_t*, int ) get_navigation_entries;
+        void function( cef_browser_host_t*, int ) set_mouse_cursor_change_disabled;
         int function( cef_browser_host_t* ) is_mouse_cursor_change_disabled;
+        void function( cef_browser_host_t*, const( cef_string_t )* ) replace_misspelling;
+        void function( cef_browser_host_t*, const( cef_string_t )* ) add_word_to_dictionary;
         int function( cef_browser_host_t* ) is_window_rendering_disabled;
         void function( cef_browser_host_t* ) was_resized;
-        void function( cef_browser_host_t*,int ) was_hidden;
+        void function( cef_browser_host_t*, int ) was_hidden;
         void function( cef_browser_host_t* ) notify_screen_info_changed;
-        void function( cef_browser_host_t*,const( cef_rect_t )*,cef_paint_element_type_t ) invalidate;
-        void function( cef_browser_host_t*,const( cef_key_event_t )* ) send_key_event;
-        void function( cef_browser_host_t*,const( cef_mouse_event_t )*,cef_mouse_button_type_t,int,int ) send_mouse_click_event;
-        void function( cef_browser_host_t*,const( cef_mouse_event_t )*,int ) send_mouse_move_event;
-        void function( cef_browser_host_t*,const( cef_mouse_event_t )*,int,int ) send_mouse_wheel_event;
-        void function( cef_browser_host_t*,int ) send_focus_event;
-        void function( cef_browser_host_t* ) send_capture_lost;
-        cef_text_input_context_t function( cef_browser_host_t* ) get_nstext_input_context;
-        void function( cef_browser_host_t*,cef_event_handle_t ) handle_key_event_before_text_input_client;
-        void function( cef_browser_host_t*,cef_event_handle_t ) handle_key_event_after_text_input_client;
+        void function( cef_browser_host_t*, cef_paint_element_type_t ) invalidate;
+        void function( cef_browser_host_t* ) send_external_begin_frame;
+        void function( cef_browser_host_t*, const( cef_key_event_t )* ) send_key_event;
+        void function( cef_browser_host_t*, const( cef_mouse_event_t )*, cef_mouse_button_type_t, int, int ) send_mouse_click_event;
+        void function( cef_browser_host_t*, const( cef_mouse_event_t )*, int ) send_mouse_move_event;
+        void function( cef_browser_host_t* self, const( cef_mouse_event_t )*, int, int ) send_mouse_wheel_event;
+        void function( cef_browser_host_t*, int ) send_focus_event;
+        void function( cef_browser_host_t* ) send_capture_lost_event;
+        void function( cef_browser_host_t* ) notify_move_or_resize_started;
+        int function( cef_browser_host_t* ) get_windowless_frame_rate;
+        void function( cef_browser_host_t*, int ) set_windowless_frame_rate;
+        void function( cef_browser_host_t*, const( cef_string_t )*, size_t, const( cef_composition_underline_t* ), const( cef_range_t )*, const( cef_range_t )* ) ime_set_composition;
+        void function( cef_browser_host_t*, const( cef_string_t )*, const( cef_range_t )*, int ) ime_commit_text;
+        void function( cef_browser_host_t*, int ) ime_finish_composing_text;
+        void function( cef_browser_host_t* ) ime_cancel_composition;
+        void function( cef_browser_host_t*, cef_drag_data_t*, const( cef_mouse_event_t )*, cef_drag_operations_mask_t ) drag_target_drag_enter;
+        void function( cef_browser_host_t*, const( cef_mouse_event_t )*, cef_drag_operations_mask_t ) drag_target_drag_over;
+        void function( cef_browser_host_t* ) drag_target_drag_leave;
+        void function( cef_browser_host_t*, const( cef_mouse_event_t )* ) drag_target_drop;
+        void function( cef_browser_host_t*, int, int, cef_drag_operations_mask_t ) drag_source_ended_at;
+        void function( cef_browser_host_t* ) drag_source_system_drag_ended;
+        cef_navigation_entry_t* function( cef_browser_host_t* ) get_visible_navigation_entry;
+        void function( cef_browser_host_t*, cef_state_t ) set_accessibility_state;
+        void function( cef_browser_host_t*, int, const( cef_size_t )*, const( cef_size_t)* ) set_auto_resize_enabled;
+        cef_extension_t* function( cef_browser_host_t* ) get_extension;
+        int function( cef_browser_host_t* ) is_background_host;
     }
 }
 
@@ -880,6 +1351,8 @@ struct cef_browser_process_handler_t  {
         void function( cef_browser_process_handler_t* ) on_context_initialized;
         void function( cef_browser_process_handler_t*,cef_command_line_t* ) on_before_child_process_launch;
         void function( cef_browser_process_handler_t*,cef_list_value_t* ) on_render_process_thread_created;
+        cef_print_handler_t* function( cef_browser_process_handler_t* ) get_print_handler;
+        void function( cef_browser_process_handler_t*, ulong ) on_schedule_message_pump_work;
     }
 }
 
@@ -892,9 +1365,9 @@ struct cef_callback_t {
     }
 }
 
-struct cef_completion_handler_t {
+struct cef_completion_callback_t {
     cef_base_t base;
-    extern( System ) @nogc nothrow void function( cef_completion_handler_t* ) on_complete;
+    extern( System ) @nogc nothrow void function( cef_completion_callback_t* ) on_complete;
 }
 
 // cef_client_capi.h
@@ -906,8 +1379,8 @@ struct cef_client_t {
         cef_display_handler_t* function( cef_client_t* ) get_display_handler;
         cef_download_handler_t* function( cef_client_t* ) get_download_handler;
         cef_drag_handler_t* function( cef_client_t* ) get_drag_handler;
+        cef_find_handler_t* function( cef_client_t* ) get_find_handler;
         cef_focus_handler_t* function( cef_client_t* ) get_focus_handler;
-        cef_geolocation_handler_t* function( cef_client_t* ) get_geolocation_handler;
         cef_jsdialog_handler_t* function( cef_client_t* ) get_jsdialog_handler;
         cef_keyboard_handler_t* function( cef_client_t* ) get_keyboard_handler;
         cef_life_span_handler_t* function( cef_client_t* ) get_life_span_handler;
@@ -946,10 +1419,19 @@ struct cef_command_line_t {
 }
 
 // cef_context_menu_handler_capi.h
+struct cef_run_context_menu_callback_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_run_context_menu_callback_t*, int, cef_event_flags_t ) cont;
+        void function( cef_run_context_menu_callback_t* ) cancel;
+    }
+}
+
 struct cef_context_menu_handler_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
         void function( cef_context_menu_handler_t*,cef_browser_t*,cef_frame_t*,cef_context_menu_params_t*,cef_menu_model_t* ) on_before_context_menu;
+        int function( cef_context_menu_handler_t*, cef_browser_t*, cef_frame_t*, cef_context_menu_params_t*, cef_menu_model_t*, cef_run_context_menu_callback_t* ) run_context_menu;
         int function( cef_context_menu_handler_t*,cef_browser_t*,cef_frame_t*,cef_context_menu_params_t*,int,cef_event_flags_t ) on_context_menu_command;
         int function( cef_context_menu_handler_t*,cef_browser_t*,cef_frame_t* ) on_context_menu_dismissed;
     }
@@ -987,7 +1469,7 @@ struct cef_cookie_manager_t {
         int function( cef_cookie_manager_t*,const( cef_string_t )*,const( cef_cookie_t )* ) set_cookie;
         int function( cef_cookie_manager_t*,const( cef_string_t )*,const( cef_string_t )* ) delete_cookie;
         int function( cef_cookie_manager_t*,const( cef_string_t )*,int ) set_storage_path;
-        int function( cef_cookie_manager_t*,cef_completion_handler_t* ) flush_store;
+        int function( cef_cookie_manager_t*,cef_completion_callback_t* ) flush_store;
     }
 }
 
@@ -1016,9 +1498,13 @@ struct cef_display_handler_t {
     extern( System ) @nogc nothrow {
         void function( cef_display_handler_t*,cef_browser_t*,cef_frame_t*,const( cef_string_t )* ) on_address_change;
         void function( cef_display_handler_t*,cef_browser_t*,const( cef_string_t )* ) on_title_change;
+        void function( cef_display_handler_t*, cef_browser_t*, cef_string_list_t ) on_favicon_urlchange;
+        void function( cef_display_handler_t*, cef_browser_t* , int ) on_fullscreen_mode_change;
         int function( cef_display_handler_t*, cef_browser_t,cef_string_t* ) on_tooltip;
         void function( cef_display_handler_t*,cef_browser_t*,const( cef_string_t )* ) on_status_message;
         int function( cef_display_handler_t*,cef_browser_t*,const( cef_string_t )*,const( cef_string_t )*,int ) on_console_message;
+        int function( cef_display_handler_t*, cef_browser_t*, const( cef_size_t )* ) on_auto_resize;
+        void function( cef_display_handler_t*, cef_browser_t*, double ) on_loading_progress_change;
     }
 }
 
@@ -1038,9 +1524,7 @@ struct cef_domdocument_t {
         cef_domnode_t* function( cef_domdocument_t*,const( cef_string_t )* ) get_element_by_id;
         cef_domnode_t* function( cef_domdocument_t* ) get_focused_node;
         int function( cef_domdocument_t* ) has_selection;
-        cef_domnode_t* function( cef_domdocument_t*) get_selection_start_node;
         int function( cef_domdocument_t* ) get_selection_start_offset;
-        cef_domnode_t* function( cef_domdocument_t* ) get_selection_end_node;
         int function( cef_domdocument_t* ) get_selection_end_offset;
         cef_string_userfree_t function( cef_domdocument_t* ) get_selection_as_markup;
         cef_string_userfree_t function( cef_domdocument_t* ) get_selection_as_text;
@@ -1070,7 +1554,6 @@ struct cef_domnode_t {
         int function( cef_domnode_t* ) has_children;
         cef_domnode_t* function( cef_domnode_t* ) get_first_child;
         cef_domnode_t* function( cef_domnode_t* ) get_last_child;
-        void function( cef_domnode_t*,const( cef_string_t )*,cef_domevent_listener_t*,int ) add_event_listener;
         cef_string_userfree_t function( cef_domnode_t* ) get_element_tag_name;
         int function( cef_domnode_t* ) has_element_attributes;
         int function( cef_domnode_t*,const( cef_string_t )* ) has_element_attribute;
@@ -1078,6 +1561,7 @@ struct cef_domnode_t {
         void function( cef_domnode_t*,cef_string_map_t ) get_element_attributes;
         int function( cef_domnode_t* ,const( cef_string_t )*,const( cef_string_t )* ) set_element_attribute;
         cef_string_userfree_t function( cef_domnode_t* ) get_element_inner_text;
+        cef_rect_t function( cef_domnode_t* ) get_element_bounds;
     }
 }
 
@@ -1108,7 +1592,11 @@ struct cef_before_download_callback_t {
 
 struct cef_download_item_callback_t {
     cef_base_t base;
-    extern( System ) @nogc nothrow void function( cef_download_item_callback_t* ) cancel;
+    extern( System ) @nogc nothrow {
+        void function( cef_download_item_callback_t* ) cancel;
+        void function( cef_download_item_callback_t* ) pause;
+        void function( cef_download_item_callback_t* ) resume;
+    }
 }
 
 struct cef_download_handler_t {
@@ -1146,24 +1634,85 @@ struct cef_download_item_t {
 struct cef_drag_data_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
+        cef_drag_data_t* function( cef_drag_data_t* ) clone;
+        int function( cef_drag_data_t* ) is_read_only;
         int function( cef_drag_data_t* ) is_link;
         int function( cef_drag_data_t* ) is_fragment;
         int function( cef_drag_data_t* ) is_file;
-        cef_string_userfree_t function( cef_drag_data_t* ) get_link_url;
+        int function( cef_drag_data_t* ) get_link_url;
         cef_string_userfree_t function( cef_drag_data_t* ) get_link_title;
         cef_string_userfree_t function( cef_drag_data_t* ) get_link_metadata;
         cef_string_userfree_t function( cef_drag_data_t* ) get_fragment_text;
         cef_string_userfree_t function( cef_drag_data_t* ) get_fragment_html;
         cef_string_userfree_t function( cef_drag_data_t* ) get_fragment_base_url;
         cef_string_userfree_t function( cef_drag_data_t* ) get_file_name;
-        int function( cef_drag_data_t*,cef_string_list_t ) get_file_names;
+        size_t function( cef_drag_data_t*, cef_stream_writer_t* ) get_file_contents;
+        int function( cef_drag_data_t*, cef_string_list_t ) get_file_names;
+        void function( cef_drag_data_t*, const( cef_string_t )* ) set_link_url;
+        void function( cef_drag_data_t*, const( cef_string_t )* ) set_link_title;
+        void function( cef_drag_data_t*, const( cef_string_t )* ) set_link_metadata;
+        void function( cef_drag_data_t*, const( cef_string_t )* ) set_fragment_text;
+        void function( cef_drag_data_t*, const( cef_string_t )* ) set_fragment_html;
+        void function( cef_drag_data_t*, const( cef_string_t )* ) set_fragment_base_url;
+        void function( cef_drag_data_t* ) reset_file_contents;
+        void function( cef_drag_data_t*, const( cef_string_t )*, const( cef_string_t )* ) add_file;
+        cef_image_t* function( cef_drag_data_t* ) get_image;
+        cef_point_t function( cef_drag_data_t* ) get_image_hotspot;
+        int function( cef_drag_data_t* ) has_image;
     }
 }
 
 // cef_drag_handler_capi.h
 struct cef_drag_handler_t {
     cef_base_t base;
-    extern( System ) @nogc nothrow int function( cef_drag_handler_t*,cef_browser_t*,cef_drag_data_t*,cef_drag_operations_mask_t ) on_drag_enter;
+    extern( System ) @nogc nothrow {
+        int function( cef_drag_handler_t*,cef_browser_t*,cef_drag_data_t*,cef_drag_operations_mask_t ) on_drag_enter;
+        void function( cef_drag_handler_t*, cef_browser_t*, size_t, const( cef_draggable_region_t*) ) on_draggable_regions_changed;
+    }
+}
+
+// cef_extension_capi.h
+struct cef_extension_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        cef_string_userfree_t function( cef_extension_t* ) get_identifier;
+        cef_string_userfree_t function( cef_extension_t* ) get_path;
+        cef_dictionary_value_t* function( cef_extension_t* ) get_manifest;
+        int function( cef_extension_t*, cef_extension_t* ) is_same;
+        cef_extension_handler_t* function( cef_extension_t* ) get_handler;
+        cef_request_context_t* function( cef_extension_t* ) get_loader_context;
+        int function( cef_extension_t* ) is_loaded;
+        void function( cef_extension_t* ) unload;
+    }
+}
+
+// cef_extension_handler_capi.h
+struct cef_get_extension_resource_callback_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_get_extension_resource_callback_t*, cef_stream_reader_t* ) cont;
+        void function( cef_get_extension_resource_callback_t* ) cancel;
+    }
+}
+
+struct cef_extension_handler_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_extension_handler_t*, cef_errorcode_t ) on_extension_load_failed;
+        void function( cef_extension_handler_t*, cef_extension_t* ) on_extension_loaded;
+        void function( cef_extension_handler_t*, cef_extension_t* ) on_extension_unloaded;
+        int function( cef_extension_handler_t*, cef_extension_t*, const( cef_string_t )*, cef_client_t**, cef_browser_settings_t* ) on_before_background_browser;
+        int function( cef_extension_handler_t*, cef_extension_t*, cef_browser_t*, cef_browser_t*, int, const( cef_string_t )*, int, cef_window_info_t*, cef_client_t**, cef_browser_settings_t* ) on_before_browser;
+        cef_browser_t* function( cef_extension_handler_t*, cef_extension_t*, cef_browser_t*, int ) get_active_browser;
+        int function( cef_extension_handler_t*, cef_extension_t*, cef_browser_t*, int, cef_browser_t* ) can_access_browser;
+        int function( cef_extension_handler_t*, cef_extension_t*, cef_browser_t*, const( cef_string_t )*, cef_get_extension_resource_callback_t* ) get_extension_resource;
+    }
+}
+
+// cef_find_handler_capi.h
+struct cef_find_handler_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow void function( cef_find_handler_t*, cef_browser_t*, int, int, const( cef_rect_t )*, int, int ) on_find_result;
 }
 
 // cef_focus_handler_capi.h
@@ -1208,25 +1757,25 @@ struct cef_frame_t {
     }
 }
 
-// cef_geolocation_capi.h
-struct cef_get_geolocation_callback_t {
-    cef_base_t base;
-    extern( System ) @nogc nothrow void function( cef_get_geolocation_callback_t*,const( cef_geoposition_t* ) ) on_location_update;
-}
-
-// cef_geolocation_handler_capi.h
-struct cef_geolocation_callback_t {
-    cef_base_t basel;
-    extern( System ) @nogc nothrow void function( cef_geolocation_callback_t*,int ) cont;
-}
-
-struct cef_geolocation_handler_t {
+// cef_image_capi.h
+struct cef_image_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
-        void function( cef_geolocation_handler_t*,cef_browser_t*,const( cef_string_t )*,int,cef_geolocation_callback_t* ) on_request_geolocation_permission;
-        void function( cef_geolocation_handler_t*,cef_browser_t*,const( cef_string_t )*,int ) on_cancel_geolocation_permission;
+        int function( cef_image_t* ) is_empty;
+        int function( cef_image_t*, cef_image_t* ) is_same;
+        int function( cef_image_t*, float, int, int, cef_color_type_t, cef_alpha_type_t, const( void )*, size_t ) add_bitmap;
+        int function( cef_image_t*, float, const( void )*, size_t ) add_png;
+        int function( cef_image_t*, float, const( void )*, size_t ) add_jpeg;
+        size_t function( cef_image_t* ) get_width;
+        size_t function( cef_image_t* ) get_height;
+        int function( cef_image_t*, float ) has_representation;
+        int function( cef_image_t*, float ) remove_representation;
+        int function( cef_image_t*, float, float*, int*, int* ) get_representation_info;
+        cef_binary_value_t* function( cef_image_t*, float, cef_color_type_t, cef_alpha_type_t, int*, int* ) get_as_bitmap;
+        cef_binary_value_t* function( cef_image_t*, float, int, int*, int* ) get_as_png;
+        cef_binary_value_t* function( cef_image_t*, float, int, int*, int* ) get_as_jpeg;
     }
-}
+};
 
 // cef_jsdialog_handler_capi.h
 struct cef_jsdialog_callback_t {
@@ -1280,6 +1829,7 @@ struct cef_load_handler_t {
 struct cef_menu_model_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
+        int function( cef_menu_model_t* ) is_sub_menu;
         int function( cef_menu_model_t* ) clear;
         int function( cef_menu_model_t* ) get_count;
         int function( cef_menu_model_t* ) add_separator;
@@ -1329,6 +1879,99 @@ struct cef_menu_model_t {
         int function( cef_menu_model_t*,int ) remove_accelerator_at;
         int function( cef_menu_model_t*,int,int*,int*,int*,int* ) get_accelerator;
         int function( cef_menu_model_t*,int,int*,int*,int*,int* ) get_accelerator_at;
+        int function( cef_menu_model_t*, int, cef_menu_color_type_t, cef_color_t ) set_color;
+        int function( cef_menu_model_t*, int, cef_menu_color_type_t, cef_color_t ) set_color_at;
+        int function( cef_menu_model_t*, int, cef_menu_color_type_t, cef_color_t* ) get_color;
+        int function( cef_menu_model_t*, int, cef_menu_color_type_t, cef_color_t* ) get_color_at;
+        int function( cef_menu_model_t*, int, const( cef_string_t )* ) set_font_list;
+        int function( cef_menu_model_t*, int, const( cef_string_t )* ) set_font_list_at;
+    }
+}
+
+// cef_menu_model_delegate_capi.h
+struct cef_menu_model_delegate_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_menu_model_delegate_t*, cef_menu_model_t*, int, cef_event_flags_t ) execute_command;
+        void function( cef_menu_model_delegate_t*, cef_menu_model_t*, const( cef_point_t)* ) mouse_outside_menu;
+        void function( cef_menu_model_delegate_t*, cef_menu_model_t*, int ) unhandled_open_submenu;
+        void function( cef_menu_model_delegate_t*, cef_menu_model_t*, int ) unhandled_close_submenu;
+        void function( cef_menu_model_delegate_t*, cef_menu_model_t* ) menu_will_show;
+        void function( cef_menu_model_delegate_t*, cef_menu_model_t* ) menu_closed;
+        int function( cef_menu_model_delegate_t*, cef_menu_model_t*, cef_string_t* ) format_label;
+    }
+}
+
+// cef_navigation_entry_capi.h
+struct cef_navigation_entry_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        int function( cef_navigation_entry_t* self) is_valid;
+        cef_string_userfree_t function( cef_navigation_entry_t* ) get_url;
+        cef_string_userfree_t function( cef_navigation_entry_t* ) get_display_url;
+        cef_string_userfree_t function( cef_navigation_entry_t* ) get_original_url;
+        cef_string_userfree_t function( cef_navigation_entry_t* ) get_title;
+        cef_transition_type_t function( cef_navigation_entry_t* ) get_transition_type;
+        int function( cef_navigation_entry_t* ) has_post_data;
+        cef_time_t function( cef_navigation_entry_t* ) get_completion_time;
+        int function( cef_navigation_entry_t* ) get_http_status_code;
+        cef_sslstatus_t* function( cef_navigation_entry_t* ) get_sslstatus;
+    }
+}
+
+// cef_print_handler_capi.h
+struct cef_print_dialog_callback_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_print_dialog_callback_t*, cef_print_settings_t* ) cont;
+        void function( cef_print_dialog_callback_t* ) cancel;
+    }
+} 
+
+struct cef_print_job_callback_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow void function( cef_print_job_callback_t* ) cont;
+}
+
+struct cef_print_handler_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_print_handler_t*, cef_browser_t* ) on_print_start;
+        void function( cef_print_handler_t*, cef_browser_t*, cef_print_settings_t*, int ) on_print_settings;
+        int function( cef_print_handler_t*, cef_browser_t*, int, cef_print_dialog_callback_t* ) on_print_dialog;
+        int function( cef_print_handler_t*, cef_browser_t*, const( cef_string_t )*, const( cef_string_t )* , cef_print_job_callback_t* ) on_print_job;
+        void function( cef_print_handler_t*, cef_browser_t* ) on_print_reset;
+        cef_size_t function( cef_print_handler_t*, int ) get_pdf_paper_size;
+    }
+}
+
+// cef_print_settings_capi.h
+struct cef_print_settings_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        int function( cef_print_settings_t* ) is_valid;
+        int function( cef_print_settings_t* ) is_read_only;
+        cef_print_settings_t* function(  cef_print_settings_t* ) copy;
+        void function( cef_print_settings_t*, int ) set_orientation;
+        int function( cef_print_settings_t* ) is_landscape;
+        void function( cef_print_settings_t*, const( cef_size_t )*, const( cef_rect_t )* , int ) set_printer_printable_area;
+        void function( cef_print_settings_t*, const( cef_string_t )* ) set_device_name;
+        cef_string_userfree_t function( cef_print_settings_t* ) get_device_name;
+        void function( cef_print_settings_t*, int ) set_dpi;
+        int function( cef_print_settings_t* ) get_dpi;
+        void function( cef_print_settings_t*, size_t, const( cef_range_t )* ) set_page_ranges;
+        size_t function( cef_print_settings_t* ) get_page_ranges_count;
+        void function( cef_print_settings_t*, size_t*, cef_range_t* ) get_page_ranges;
+        void function( cef_print_settings_t*, int ) set_selection_only;
+        int function( cef_print_settings_t* ) is_selection_only;
+        void function( cef_print_settings_t*, int ) set_collate;
+        int function( cef_print_settings_t* ) will_collate;
+        void function( cef_print_settings_t*, cef_color_model_t ) set_color_model;
+        cef_color_model_t function( cef_print_settings_t* ) get_color_model;
+        void function( cef_print_settings_t*, int ) set_copies;
+        int function( cef_print_settings_t* ) get_copies;
+        void function( cef_print_settings_t*, cef_duplex_mode_t mode ) set_duplex_mode;
+        cef_duplex_mode_t function( cef_print_settings_t* ) get_duplex_mode;
     }
 }
 
@@ -1348,6 +1991,7 @@ struct cef_process_message_t {
 struct cef_render_handler_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
+        cef_accessibility_handler_t* function( cef_render_handler_t* ) get_accessibility_handler;
         int function( cef_render_handler_t*,cef_browser_t*,cef_rect_t* ) get_root_screen_rect;
         int function( cef_render_handler_t*,cef_browser_t*,cef_rect_t* ) get_view_rect;
         int function( cef_render_handler_t*,cef_browser_t*,int,int,int*,int* ) get_screen_point;
@@ -1355,7 +1999,13 @@ struct cef_render_handler_t {
         void function( cef_render_handler_t*,cef_browser_t*,int ) on_popup_show;
         void function( cef_render_handler_t*,cef_browser_t*,const( cef_rect_t )* ) on_popup_size;
         void function( cef_render_handler_t*,cef_browser_t*,cef_paint_element_type_t,size_t,const( cef_rect_t* ),const( void )*,int,int ) on_paint;
+        void function( cef_render_handler_t*, cef_browser_t*, cef_paint_element_type_t, size_t , const( cef_rect_t* ), void* ) on_accelerated_paint;
         void function( cef_render_handler_t*,cef_browser_t*,cef_cursor_handle_t ) on_cursor_change;
+        int function( cef_render_handler_t*, cef_browser_t*, cef_drag_data_t*, cef_drag_operations_mask_t, int, int ) start_dragging;
+        void function( cef_render_handler_t*, cef_browser_t*, cef_drag_operations_mask_t ) update_drag_cursor;
+        void function( cef_render_handler_t*, cef_browser_t*, double, double ) on_scroll_offset_changed;
+        void function( cef_render_handler_t*, cef_browser_t*, const( cef_range_t )*, size_t, const( cef_rect_t* ) ) on_ime_composition_range_changed;
+        void function( cef_render_handler_t*, cef_browser_t*, const( cef_string_t )*, const( cef_range_t )* ) on_text_selection_changed;
     }
 }
 
@@ -1386,6 +2036,9 @@ struct cef_request_t {
         void function( cef_request_t*,const( cef_string_t )* ) set_url;
         cef_string_userfree_t function( cef_request_t* ) get_method;
         void function( cef_request_t*,const( cef_string_t )* ) set_method;
+        void function( cef_request_t*, const( cef_string_t )*, cef_referrer_policy_t ) set_referrer;
+        cef_string_userfree_t function( cef_request_t* ) get_referrer_url;
+        cef_referrer_policy_t function( cef_request_t* ) get_referrer_policy;
         cef_post_data_t* function( cef_request_t* ) get_post_data;
         void function( cef_request_t*, cef_post_data_t* ) set_post_data;
         void function( cef_request_t*,cef_string_multimap_t ) get_header_map;
@@ -1397,6 +2050,7 @@ struct cef_request_t {
         void function( cef_request_t*,const( cef_string_t )* ) set_first_party_for_cookies;
         cef_resource_type_t function( cef_request_t* ) get_resource_type;
         cef_transition_type_t function( cef_request_t* ) get_transition_type;
+        ulong function( cef_request_t* ) get_identifier;
     }
 }
 
@@ -1404,6 +2058,7 @@ struct cef_post_data_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
         int function( cef_post_data_t* ) is_read_only;
+        int function( cef_post_data_t* ) has_excluded_elements;
         size_t function( cef_post_data_t* ) get_element_count;
         void function( cef_post_data_t*,size_t*,cef_post_data_element_t** ) get_elements;
         int function( cef_post_data_t*,cef_post_data_element_t* ) remove_element;
@@ -1427,49 +2082,95 @@ struct cef_post_data_element_t {
 }
 
 // cef_request_context_capi.h
+struct cef_resolve_callback_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow void function( cef_resolve_callback_t*, cef_errorcode_t, cef_string_list_t ) on_resolve_completed;
+}
+
 struct cef_request_context_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
-        int function( cef_request_context_t*,cef_request_context_t* ) is_same;
+        int function( cef_request_context_t* self, cef_request_context_t* ) is_same;
+        int function( cef_request_context_t*, cef_request_context_t* ) is_sharing_with;
         int function( cef_request_context_t* ) is_global;
         cef_request_context_handler_t* function( cef_request_context_t* ) get_handler;
+        cef_string_userfree_t function( cef_request_context_t* ) get_cache_path;
+        cef_cookie_manager_t* function( cef_request_context_t*, cef_completion_callback_t* ) get_default_cookie_manager;
+        int function( cef_request_context_t*, const( cef_string_t )*, const( cef_string_t )*, cef_scheme_handler_factory_t* ) register_scheme_handler_factory;
+        int function( cef_request_context_t* ) clear_scheme_handler_factories;
+        void function( cef_request_context_t*, int ) purge_plugin_list_cache;
+        int function( cef_request_context_t*, const( cef_string_t )* name) has_preference;
+        cef_value_t* function( cef_request_context_t*, cef_string_t* ) get_preference;
+        cef_dictionary_value_t* function( cef_request_context_t*, int ) get_all_preferences;
+        int function( cef_request_context_t*, const( cef_string_t )* ) can_set_preference;
+        int function( cef_request_context_t*, const( cef_string_t )*, cef_value_t*, cef_string_t* ) set_preference;
+        void function( cef_request_context_t*, cef_completion_callback_t* ) clear_certificate_exceptions;
+        void function( cef_request_context_t*, cef_completion_callback_t* ) close_all_connections;
+        void function( cef_request_context_t*, const( cef_string_t )*, cef_resolve_callback_t* ) resolve_host;
+        cef_errorcode_t function( cef_request_context_t*, const( cef_string_t )*, cef_string_list_t ) resolve_host_cached;
+        void function( cef_request_context_t*, const( cef_string_t )*, cef_dictionary_value_t*, cef_extension_handler_t* ) load_extension;
+        int function( cef_request_context_t*, const( cef_string_t )* ) did_load_extension;
+        int function( cef_request_context_t*, const( cef_string_t )* ) has_extension;
+        int function( cef_request_context_t*, cef_string_list_t ) get_extensions;
+        cef_extension_t* function( cef_request_context_t*, const( cef_string_t )* ) get_extension;
     }
 }
 
 // cef_request_context_handler_capi.h
 struct cef_request_context_handler_t {
     cef_base_t base;
-    extern( System ) @nogc nothrow cef_cookie_manager_t* function( cef_request_context_handler_t* ) get_cookie_manager;
-}
-
-// cef_request_handler_capi.h
-struct cef_quota_callback_t {
-    cef_base_t base;
     extern( System ) @nogc nothrow {
-        void function( cef_quota_callback_t*,int ) cont;
-        void function( cef_quota_callback_t* ) cancel;
+        void function( cef_request_context_handler_t*, cef_request_context_t* ) on_request_context_initialized;
+        cef_cookie_manager_t* function( cef_request_context_handler_t* ) get_cookie_manager;
+        int function( cef_request_context_handler_t*, const( cef_string_t )*, const( cef_string_t )*, int, const( cef_string_t )*, cef_web_plugin_info_t*, cef_plugin_policy_t* ) on_before_plugin_load;
     }
 }
 
-struct cef_allow_certificate_error_callback_t {
+// cef_request_handler_capi.h
+struct cef_request_callback_t {
     cef_base_t base;
-    extern( System ) @nogc nothrow void function( cef_allow_certificate_error_callback_t*,int ) cont;
+    extern( System ) @nogc nothrow {
+        void function( cef_request_callback_t*,int ) cont;
+        void function( cef_request_callback_t* ) cancel;
+    }
+}
+
+struct cef_select_client_certificate_callback_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow void function( cef_select_client_certificate_callback_t*, cef_x509certificate_t* ) select;
 }
 
 struct cef_request_handler_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
         int function( cef_request_handler_t*,cef_browser_t*,cef_frame_t*,cef_request_t*,int ) on_before_browse;
+        int function( cef_request_handler_t*, cef_browser_t*, cef_frame_t*, const( cef_string_t )*, cef_window_open_disposition_t, int ) on_open_urlfrom_tab;
         int function( cef_request_handler_t*,cef_browser_t*,cef_frame_t*,cef_request_t* ) on_before_resource_load;
         cef_resource_handler_t* function( cef_request_handler_t*,cef_browser_t*,cef_frame_t*,cef_request_t* ) get_resource_handler;
         void function( cef_request_handler_t*,cef_browser_t*,cef_frame_t*,const( cef_string_t )*,cef_string_t* ) on_resource_redirect;
+        int function( cef_request_handler_t*, cef_browser_t*, cef_frame_t*, cef_request_t*, cef_response_t* ) on_resource_response;
+        cef_response_filter_t* function( cef_request_handler_t*, cef_browser_t*, cef_frame_t*, cef_request_t*, cef_response_t* ) get_resource_response_filter;
+        void function( cef_request_handler_t*, cef_browser_t*, cef_frame_t*, cef_request_t*, cef_response_t*, cef_urlrequest_status_t, ulong ) on_resource_load_complete;
         int function( cef_request_handler_t*,cef_browser_t*,cef_frame_t*,int,const( cef_string_t )*,int,const( cef_string_t )*,const( cef_string_t )*,cef_auth_callback_t* ) get_auth_credentials;
-        int function( cef_request_handler_t*,cef_browser_t*,const( cef_string_t )*,int64,cef_quota_callback_t* ) on_quota_request;
-        void function( cef_request_handler_t*,cef_browser_t*,const( cef_string_t )*,int* ) on_protocol_execution;
-        int function( cef_request_handler_t*,cef_errorcode_t,const( cef_string_t )*,cef_allow_certificate_error_callback_t* ) on_certificate_error;
-        int function( cef_request_handler_t*,cef_browser_t*,const( cef_string_t )*,const( cef_string_t )*,cef_web_plugin_info_t* ) on_before_plugin_load;
-        void function( cef_request_handler_t*,cef_browser_t*,const( cef_string_t )* ) on_plugin_crashed;
+        int function( cef_request_handler_t*, cef_browser_t*, cef_frame_t*, cef_request_t* ) can_get_cookies;
+        int function( cef_request_handler_t*, cef_browser_t*, cef_frame_t*, cef_request_t*, const( cef_cookie_t )* ) can_set_cookie;
+        int function( cef_request_handler_t*, cef_browser_t*, const( cef_string_t )*, ulong, cef_request_callback_t* ) on_quota_request;
+        void function( cef_request_handler_t*, cef_browser_t*, const( cef_string_t )*, int* ) on_protocol_execution;
+        int function( cef_request_handler_t*, cef_browser_t*, cef_errorcode_t, const( cef_string_t )*, cef_sslinfo_t*, cef_request_callback_t* ) on_certificate_error;
+        int function( cef_request_handler_t*, cef_browser_t*, int, const( cef_string_t )*, int, size_t, const( cef_x509certificate_t*), cef_select_client_certificate_callback_t* ) on_select_client_certificate;
+        void function( cef_request_handler_t*, cef_browser_t*, const( cef_string_t )* ) on_plugin_crashed;
+        void function( cef_request_handler_t*, cef_browser_t* ) on_render_view_ready;
         void function( cef_request_handler_t*,cef_browser_t*,cef_termination_status_t ) on_render_process_terminated;
+    }
+}
+
+// cef_resource_bundle_capi.h
+struct cef_resource_bundle_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        cef_string_userfree_t function( cef_resource_bundle_t*, int ) get_localized_string;
+        int function( cef_resource_bundle_t*, int, void**, size_t* ) get_data_resource;
+        int function( cef_resource_bundle_t*, int, cef_scale_factor_t, void**, size_t* ) get_data_resource_for_scale;
     }
 }
 
@@ -1479,6 +2180,7 @@ struct cef_resource_bundle_handler_t {
     extern( System ) @nogc nothrow {
         int function( cef_resource_bundle_handler_t*,int,cef_string_t* ) get_localized_string;
         int function( cef_resource_bundle_handler_t*,int,void**,size_t* ) get_data_resource;
+        int function( cef_resource_bundle_handler_t*, int, cef_scale_factor_t, void**, size_t* ) get_data_resource_for_scale;
     }
 }
 
@@ -1500,6 +2202,8 @@ struct cef_response_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
         int function( cef_response_t* ) is_read_only;
+        cef_errorcode_t function( cef_response_t* ) get_error;
+        void function( cef_response_t*,cef_errorcode_t ) set_error;
         int function( cef_response_t* ) get_status;
         void function( cef_response_t*,int ) set_status;
         cef_string_userfree_t function( cef_response_t* ) get_status_text;
@@ -1509,13 +2213,24 @@ struct cef_response_t {
         cef_string_userfree_t function( cef_response_t*,const( cef_string_t )* ) get_header;
         void function( cef_response_t*,cef_string_multimap_t ) get_header_map;
         void function( cef_response_t*,cef_string_multimap_t ) set_header_map;
+        cef_string_userfree_t function( cef_response_t* ) get_url;
+        void function( cef_response_t*, const( cef_string_t )* ) set_url;
+    }
+}
+
+// cef_response_filter_capi.h
+struct cef_response_filter_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        int function( cef_response_filter_t* ) init_filter;
+        cef_response_filter_status_t function( cef_response_filter_t*, void*, size_t, size_t*, void*, size_t, size_t* ) filter;
     }
 }
 
 // cef_scheme_capi.h
 struct cef_scheme_registrar_t {
     cef_base_t base;
-    extern( System ) @nogc nothrow int function( cef_scheme_registrar_t*,const( cef_string_t )*,int,int,int ) add_custom_scheme;
+    extern( System ) @nogc nothrow int function( cef_scheme_registrar_t*,const( cef_string_t )*,int,int,int,int,int,int ) add_custom_scheme;
 }
 
 struct cef_scheme_handler_factory_t {
@@ -1523,13 +2238,68 @@ struct cef_scheme_handler_factory_t {
     extern( System ) @nogc nothrow cef_resource_handler_t* function( cef_scheme_handler_factory_t*,cef_browser_t*,cef_frame_t*,const( cef_string_t )*,cef_request_t* ) create;
 }
 
+// cef_server_capi.h
+struct cef_server_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        cef_task_runner_t* function( cef_server_t* ) get_task_runner;
+        void function( cef_server_t* ) shutdown;
+        int function( cef_server_t* ) is_running;
+        cef_string_userfree_t function( cef_server_t* ) get_address;
+        int function( cef_server_t* ) has_connection;
+        int function( cef_server_t*, int ) is_valid_connection;
+        void function( cef_server_t*, int, const( cef_string_t )*, const( void )*, size_t ) send_http200response;
+        void function( cef_server_t*, int ) send_http404response;
+        void function( cef_server_t*, int, const( cef_string_t )* ) send_http500response;
+        void function( cef_server_t*, int, int , const( cef_string_t )*, ulong, cef_string_multimap_t ) send_http_response;
+        void function( cef_server_t*, int, const( void )*, size_t ) send_raw_data;
+        void function( cef_server_t*, int ) close_connection;
+        void function( cef_server_t*, int, const( void )*, size_t ) send_web_socket_message;
+    }
+}
+
+struct cef_server_handler_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_server_handler_t*, cef_server_t* ) on_server_created;
+        void function( cef_server_handler_t*, cef_server_t* ) on_server_destroyed;
+        void function( cef_server_handler_t*, cef_server_t*, int ) on_client_connected;
+        void function( cef_server_handler_t*, cef_server_t*, int ) on_client_disconnected;
+        void function( cef_server_handler_t*, cef_server_t*, int, const( cef_string_t )*, cef_request_t* ) on_http_request;
+        void function( cef_server_handler_t*, cef_server_t*, int, const( cef_string_t )*, cef_request_t*, cef_callback_t* ) on_web_socket_request;
+        void function( cef_server_handler_t*, cef_server_t* server, int ) on_web_socket_connected;
+        void function( cef_server_handler_t*, cef_server_t*, int, const( void )*, size_t ) on_web_socket_message;
+    }
+}
+
+// cef_ssl_info_capi.h
+struct cef_sslinfo_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        cef_cert_status_t function( cef_sslinfo_t* ) get_cert_status;
+        cef_x509certificate_t* function( cef_sslinfo_t* self) get_x509certificate;
+    }
+}
+
+// cef_ssl_status_capi.h
+struct cef_sslstatus_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        int function( cef_sslstatus_t* ) is_secure_connection;
+        cef_cert_status_t function( cef_sslstatus_t* ) get_cert_status;
+        cef_ssl_version_t function( cef_sslstatus_t* ) get_sslversion;
+        cef_ssl_content_status_t function( cef_sslstatus_t* ) get_content_status;
+        cef_x509certificate_t* function( cef_sslstatus_t* ) get_x509certificate;
+    }
+}
+
 // cef_stream_capi.h
 struct cef_read_handler_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
-        size_t function( cef_read_handler_t*,void*,size_t,size_t ) read;
-        int function( cef_read_handler_t*,int64,int ) seek;
-        int64 function( cef_read_handler_t* ) tell;
+        size_t function( cef_read_handler_t*, void*, size_t, size_t ) read;
+        int function( cef_read_handler_t*, ulong, int ) seek;
+        ulong function( cef_read_handler_t* ) tell;
         int function( cef_read_handler_t* ) eof;
         int function( cef_read_handler_t* ) may_block;
     }
@@ -1538,9 +2308,9 @@ struct cef_read_handler_t {
 struct cef_stream_reader_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
-        size_t function( cef_stream_reader_t*,void*,size_t,size_t ) read;
-        int function( cef_stream_reader_t*,int64,int ) seek;
-        int64 function( cef_stream_reader_t* ) tell;
+        size_t function( cef_stream_reader_t*, void*, size_t, size_t ) read;
+        int function( cef_stream_reader_t*, ulong, int ) seek;
+        ulong function( cef_stream_reader_t* ) tell;
         int function( cef_stream_reader_t* ) eof;
         int function( cef_stream_reader_t* ) may_block;
     }
@@ -1549,9 +2319,9 @@ struct cef_stream_reader_t {
 struct cef_write_handler_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
-        size_t function( cef_write_handler_t*,const( void )*,size_t,size_t ) write;
-        int function( cef_write_handler_t*,int64,int ) seek;
-        int64 function( cef_write_handler_t* ) tell;
+        size_t function( cef_write_handler_t*, const( void )*, size_t, size_t ) write;
+        int function( cef_write_handler_t*, ulong, int ) seek;
+        ulong function( cef_write_handler_t* ) tell;
         int function( cef_write_handler_t* ) flush;
         int function( cef_write_handler_t* ) may_block;
     }
@@ -1560,9 +2330,9 @@ struct cef_write_handler_t {
 struct cef_stream_writer_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
-        size_t function( cef_stream_writer_t*,const( void )*,size_t,size_t ) write;
-        int function( cef_stream_writer_t*,int64,int ) seek;
-        int64 function( cef_stream_writer_t* ) tell;
+        size_t function( cef_stream_writer_t*, const( void )*, size_t, size_t ) write;
+        int function( cef_stream_writer_t*, ulong, int ) seek;
+        ulong function( cef_stream_writer_t* ) tell;
         int function( cef_stream_writer_t* ) flush;
         int function( cef_stream_writer_t* ) may_block;
     }
@@ -1571,30 +2341,41 @@ struct cef_stream_writer_t {
 // cef_string_visitor_capi.h
 struct cef_string_visitor_t {
     cef_base_t base;
-    extern( System ) @nogc nothrow void function( cef_string_visitor_t*,const( cef_string_t )* ) visit;
+    extern( System ) @nogc nothrow void function( cef_string_visitor_t*, const( cef_string_t )* ) visit;
 }
 
 // cef_task_capi.h
 struct cef_task_t {
     cef_base_t base;
     extern( System ) @nogc nothrow void function( cef_task_t* ) execute;
-}
+} 
 
 struct cef_task_runner_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
-        int function( cef_task_runner_t*,cef_task_runner_t* ) is_same;
+        int function( cef_task_runner_t*, cef_task_runner_t* ) is_same;
         int function( cef_task_runner_t* ) belongs_to_current_thread;
-        int function( cef_task_runner_t*,cef_thread_id_t ) belongs_to_thread;
-        int function( cef_task_runner_t*,cef_task_t* ) post_task;
-        int function( cef_task_runner_t*,cef_task_t*,int64 ) post_delayed_task;
+        int function( cef_task_runner_t*, cef_thread_id_t ) belongs_to_thread;
+        int function( cef_task_runner_t*, cef_task_t* ) post_task;
+        int function( cef_task_runner_t*, cef_task_t*, ulong ) post_delayed_task;
+    }
+}
+
+// cef_thread_capi.h
+struct cef_thread_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        cef_task_runner_t* function( cef_thread_t* ) get_task_runner;
+        cef_platform_thread_id_t function( cef_thread_t* ) get_platform_thread_id;
+        void function( cef_thread_t* ) stop;
+        int function( cef_thread_t* ) is_running;
     }
 }
 
 // cef_trace_capi.h
 struct cef_end_tracing_callback_t {
     cef_base_t base;
-    extern( System ) @nogc nothrow void function( cef_end_tracing_callback_t*,const( cef_string_t )* ) on_end_tracing_complete;
+    extern( System ) @nogc nothrow void function( cef_end_tracing_callback_t*, const( cef_string_t )* ) on_end_tracing_complete;
 }
 
 // cef_urlrequest_capi.h
@@ -1606,6 +2387,7 @@ struct cef_urlrequest_t {
         cef_urlrequest_status_t function( cef_urlrequest_t* ) get_request_status;
         cef_errorcode_t function( cef_urlrequest_t* ) get_request_error;
         cef_response_t* function( cef_urlrequest_t* ) get_response;
+        int function( cef_urlrequest_t* ) response_was_cached;
         void function( cef_urlrequest_t* ) cancel;
     }
 }
@@ -1613,11 +2395,11 @@ struct cef_urlrequest_t {
 struct cef_urlrequest_client_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
-        void function( cef_urlrequest_client_t*,cef_urlrequest_t* ) on_request_complete;
-        void function( cef_urlrequest_client_t*,cef_urlrequest_t*,uint64,uint64 ) on_upload_progress;
-        void function( cef_urlrequest_client_t*,cef_urlrequest_t*,uint64,uint64 ) on_download_progress;
-        void function( cef_urlrequest_client_t*,cef_urlrequest_t*,const( void )*,size_t ) on_download_data;
-        int function( cef_urlrequest_client_t*,int,const( cef_string_t )*,int,const( cef_string_t )*,const( cef_string_t )*,cef_auth_callback_t* ) get_auth_credentials;
+        void function( cef_urlrequest_client_t*, cef_urlrequest_t* ) on_request_complete;
+        void function( cef_urlrequest_client_t*, cef_urlrequest_t*, ulong, ulong ) on_upload_progress;
+        void function( cef_urlrequest_client_t*, cef_urlrequest_t*, ulong, ulong ) on_download_progress;
+        void function( cef_urlrequest_client_t*, cef_urlrequest_t*, const( void )*, size_t) on_download_data;
+        int function( cef_urlrequest_client_t*, int, const( cef_string_t )*, int, const( cef_string_t )*, const( cef_string_t )*, cef_auth_callback_t* ) get_auth_credentials;
     }
 }
 
@@ -1625,28 +2407,38 @@ struct cef_urlrequest_client_t {
 struct cef_v8context_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
-        cef_task_runner_t* function( cef_v8context_t* ) get_task_runner;
+        cef_task_runner_t* function( cef_v8context_t* slf) get_task_runner;
         int function( cef_v8context_t* ) is_valid;
-        cef_browser_t* function( cef_v8context_t*cef_browser_t ) get_browser;
+        cef_browser_t* function( cef_v8context_t* ) get_browser;
         cef_frame_t* function( cef_v8context_t* ) get_frame;
         cef_v8value_t* function( cef_v8context_t* ) get_global;
         int function( cef_v8context_t* ) enter;
         int function( cef_v8context_t* ) exit;
-        int function( cef_v8context_t*,cef_v8context_t* ) is_same;
-        int function( cef_v8context_t*,const( cef_string_t )*,cef_v8value_t**,cef_v8exception_t** ) eval;
+        int function( cef_v8context_t*, cef_v8context_t* ) is_same;
+        int function( cef_v8context_t*, const( cef_string_t )*, const( cef_string_t )*, int, cef_v8value_t**, cef_v8exception_t** ) eval;
     }
 }
 
 struct cef_v8handler_t {
     cef_base_t base;
-    extern( System ) @nogc nothrow int function( cef_v8handler_t*,const( cef_string_t )*,cef_v8value_t*,size_t,const( cef_v8value_t* )*,cef_v8value_t**,cef_string_t* ) execute;
+    extern( System ) @nogc nothrow int function( cef_v8handler_t*, const( cef_string_t )*, cef_v8value_t*, size_t, const( cef_v8value_t* ), cef_v8value_t**, cef_string_t* ) execute;
 }
 
 struct cef_v8accessor_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
-        int function( cef_v8accessor_t*,const( cef_string_t )*,cef_v8value_t*,cef_v8value_t**,cef_string_t* ) get;
-        int function( cef_v8accessor_t*,const( cef_string_t )*,cef_v8value_t*,cef_v8value_t*,cef_string_t* ) set;
+        int function( cef_v8accessor_t*, const( cef_string_t )*, cef_v8value_t*, cef_v8value_t**, cef_string_t* ) get;
+        int function( cef_v8accessor_t*, const( cef_string_t )*, cef_v8value_t*, cef_v8value_t*, cef_string_t* ) set;
+    }
+}
+
+struct cef_v8interceptor_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        int function( cef_v8interceptor_t*, const( cef_string_t )*, cef_v8value_t*, cef_v8value_t**, cef_string_t* ) get_byname;
+        int function( cef_v8interceptor_t*, int, cef_v8value_t*, cef_v8value_t**, cef_string_t* ) get_byindex;
+        int function( cef_v8interceptor_t*, const( cef_string_t )*, cef_v8value_t*, cef_v8value_t*, cef_string_t* ) set_byname;
+        int function( cef_v8interceptor_t*, int, cef_v8value_t*, cef_v8value_t*, cef_string_t* ) set_byindex;
     }
 }
 
@@ -1664,6 +2456,11 @@ struct cef_v8exception_t {
     }
 }
 
+struct cef_v8array_buffer_release_callback_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow  void function( cef_v8array_buffer_release_callback_t*, void* ) release_buffer;
+}
+
 struct cef_v8value_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
@@ -1678,10 +2475,11 @@ struct cef_v8value_t {
         int function( cef_v8value_t* ) is_string;
         int function( cef_v8value_t* ) is_object;
         int function( cef_v8value_t* ) is_array;
+        int function( cef_v8value_t* ) is_array_buffer;
         int function( cef_v8value_t* ) is_function;
-        int function( cef_v8value_t*,cef_v8value_t* ) is_same;
+        int function( cef_v8value_t*, cef_v8value_t* ) is_same;
         int function( cef_v8value_t* ) get_bool_value;
-        int32 function ( cef_v8value_t* ) get_int_value;
+        int32 function( cef_v8value_t* ) get_int_value;
         uint32 function( cef_v8value_t* ) get_uint_value;
         double function( cef_v8value_t* ) get_double_value;
         cef_time_t function( cef_v8value_t* ) get_date_value;
@@ -1690,27 +2488,29 @@ struct cef_v8value_t {
         int function( cef_v8value_t* ) has_exception;
         cef_v8exception_t* function( cef_v8value_t* ) get_exception;
         int function( cef_v8value_t* ) clear_exception;
-        int function( cef_v8value_t* ) will_rethrow_exception;
-        int function( cef_v8value_t*,int ) set_rethrow_exception;
-        int function( cef_v8value_t*,const( cef_string_t )* ) has_value_bykey;
-        int function( cef_v8value_t*,int ) has_value_byindex;
-        int function( cef_v8value_t*,const( cef_string_t )* ) delete_value_bykey;
-        int function( cef_v8value_t*,int ) delete_value_byindex;
-        cef_v8value_t* function( cef_v8value_t*,const( cef_string_t )* ) get_value_bykey;
-        cef_v8value_t* function( cef_v8value_t*,int ) get_value_byindex;
-        int function( cef_v8value_t*,const( cef_string_t )*,cef_v8value_t*,cef_v8_propertyattribute_t ) set_value_bykey;
-        int function( cef_v8value_t*,int,cef_v8value_t* ) set_value_byindex;
-        int function( cef_v8value_t*,const( cef_string_t )*,cef_v8_accesscontrol_t,cef_v8_propertyattribute_t ) set_value_byaccessor;
-        int function( cef_v8value_t*,cef_string_list_t ) get_keys;
-        int function( cef_v8value_t*,cef_base_t* ) set_user_data;
+        int function( cef_v8value_t* ) will_rethrow_exceptions;
+        int function( cef_v8value_t*, int ) set_rethrow_exceptions;
+        int function( cef_v8value_t*, const( cef_string_t )* ) has_value_bykey;
+        int function( cef_v8value_t*, int ) has_value_byindex;
+        int function( cef_v8value_t*, const( cef_string_t )* ) delete_value_bykey;
+        int function( cef_v8value_t*, int ) delete_value_byindex;
+        cef_v8value_t* function( cef_v8value_t*, const( cef_string_t )* ) get_value_bykey;
+        cef_v8value_t* function( cef_v8value_t*, int ) get_value_byindex;
+        int function( cef_v8value_t*, const( cef_string_t )*, cef_v8value_t*, cef_v8_propertyattribute_t ) set_value_bykey;
+        int function( cef_v8value_t*, int, cef_v8value_t* ) set_value_byindex;
+        int function( cef_v8value_t*, const( cef_string_t )*, cef_v8_accesscontrol_t, cef_v8_propertyattribute_t ) set_value_byaccessor;
+        int function( cef_v8value_t*, cef_string_list_t ) get_keys;
+        int function( cef_v8value_t*, cef_base_t* ) set_user_data;
         cef_base_t* function( cef_v8value_t* ) get_user_data;
         int function( cef_v8value_t* ) get_externally_allocated_memory;
-        int function( cef_v8value_t*,int ) adjust_externally_allocated_memory;
+        int function( cef_v8value_t*, int ) adjust_externally_allocated_memory;
         int function( cef_v8value_t* ) get_array_length;
+        cef_v8array_buffer_release_callback_t* function( cef_v8value_t* ) get_array_buffer_release_callback;
+        int function( cef_v8value_t* ) neuter_array_buffer;
         cef_string_userfree_t function( cef_v8value_t* ) get_function_name;
         cef_v8handler_t* function( cef_v8value_t* ) get_function_handler;
-        cef_v8value_t* function( cef_v8value_t*,cef_v8value_t*,size_t,const( cef_v8value_t* )* ) execute_function;
-        cef_v8value_t* function( cef_v8value_t*,cef_v8context_t*,cef_v8value_t*,size_t,const( cef_v8value_t* )* ) execute_function_with_context;
+        cef_v8value_t* function( cef_v8value_t*, cef_v8value_t*, size_t, const( cef_v8value_t* ) ) execute_function;
+        cef_v8value_t* function( cef_v8value_t*, cef_v8context_t*, cef_v8value_t*, size_t, const( cef_v8value_t* )) execute_function_with_context;
     }
 }
 
@@ -1719,7 +2519,7 @@ struct cef_v8stack_trace_t {
     extern( System ) @nogc nothrow {
         int function( cef_v8stack_trace_t* ) is_valid;
         int function( cef_v8stack_trace_t* ) get_frame_count;
-        cef_v8stack_frame_t* function( cef_v8stack_trace_t* ) get_frame;
+        cef_v8stack_frame_t* function( cef_v8stack_trace_t*, int ) get_frame;
     }
 }
 
@@ -1737,15 +2537,46 @@ struct cef_v8stack_frame_t {
     }
 }
 
+
 // cef_values_capi.h
+struct cef_value_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        int function( cef_value_t* ) is_valid;
+        int function( cef_value_t* ) is_owned;
+        int function( cef_value_t* ) is_read_only;
+        int function( cef_value_t*, cef_value_t* ) is_same;
+        int function( cef_value_t*, cef_value_t* ) is_equal;
+        cef_value_t* function( cef_value_t* ) copy;
+        cef_value_type_t function( cef_value_t* ) get_type;
+        int function( cef_value_t* ) get_bool;
+        int function( cef_value_t* ) get_int;
+        double function( cef_value_t* ) get_double;
+        cef_string_userfree_t function( cef_value_t* ) get_string;
+        cef_binary_value_t* function( cef_value_t* ) get_binary;
+        cef_dictionary_value_t* function( cef_value_t* ) get_dictionary;
+        cef_list_value_t* function( cef_value_t* ) get_list;
+        int function( cef_value_t* ) set_null;
+        int function( cef_value_t*, int ) set_bool;
+        int function( cef_value_t*, int ) set_int;
+        int function( cef_value_t*, double ) set_double;
+        int function( cef_value_t*, const( cef_string_t )* ) set_string;
+        int function( cef_value_t*, cef_binary_value_t* ) set_binary;
+        int function( cef_value_t*, cef_dictionary_value_t* ) set_dictionary;
+        int function( cef_value_t*, cef_list_value_t* ) set_list;
+    }
+}
+
 struct cef_binary_value_t {
     cef_base_t base;
     extern( System ) @nogc nothrow {
         int function( cef_binary_value_t* ) is_valid;
         int function( cef_binary_value_t* ) is_owned;
+        int function( cef_binary_value_t*, cef_binary_value_t* ) is_same;
+        int function( cef_binary_value_t*, cef_binary_value_t* ) is_equal;
         cef_binary_value_t* function( cef_binary_value_t* ) copy;
         size_t function( cef_binary_value_t* ) get_size;
-        size_t function( cef_binary_value_t*,void*,size_t,size_t ) get_data;
+        size_t function( cef_binary_value_t*, void*, size_t, size_t ) get_data;
     }
 }
 
@@ -1755,28 +2586,32 @@ struct cef_dictionary_value_t {
         int function( cef_dictionary_value_t* ) is_valid;
         int function( cef_dictionary_value_t* ) is_owned;
         int function( cef_dictionary_value_t* ) is_read_only;
-        cef_dictionary_value_t* function( cef_dictionary_value_t* ) copy;
+        int function( cef_dictionary_value_t*, cef_dictionary_value_t* ) is_same;
+        int function( cef_dictionary_value_t*, cef_dictionary_value_t* ) is_equal;
+        cef_dictionary_value_t* function( cef_dictionary_value_t*, int ) copy;
         size_t function( cef_dictionary_value_t* ) get_size;
         int function( cef_dictionary_value_t* ) clear;
-        int function( cef_dictionary_value_t*,const( cef_string_t )* ) has_key;
-        int function( cef_dictionary_value_t*,cef_string_list_t ) get_keys;
-        int function( cef_dictionary_value_t*,const( cef_string_t )* ) remove;
-        cef_value_type_t function( cef_dictionary_value_t*,const( cef_string_t )* ) get_type;
-        int function( cef_dictionary_value_t*,const( cef_string_t )* ) get_bool;
-        int function( cef_dictionary_value_t*,const( cef_string_t )* ) get_int;
-        double function( cef_dictionary_value_t*,const( cef_string_t )* ) get_double;
-        cef_string_userfree_t function( cef_dictionary_value_t*,const( cef_string_t )* ) get_string;
-        cef_binary_value_t* function( cef_dictionary_value_t*,const( cef_string_t )* ) get_binary;
-        cef_dictionary_value_t* function( cef_dictionary_value_t*,const( cef_string_t )* ) get_dictionary;
-        cef_list_value_t* function( cef_dictionary_value_t*,const( cef_string_t )* ) get_list;
-        int function( cef_dictionary_value_t*,const( cef_string_t )* ) set_null;
-        int function( cef_dictionary_value_t*,const( cef_string_t )*,int ) set_bool;
-        int function( cef_dictionary_value_t*,const( cef_string_t )*,int ) set_int;
-        int function( cef_dictionary_value_t*,const( cef_string_t )*,double ) set_double;
-        int function( cef_dictionary_value_t*,const( cef_string_t )*,const( cef_string_t )* ) set_string;
-        int function( cef_dictionary_value_t*,const( cef_string_t )*,cef_binary_value_t* ) set_binary;
-        int function( cef_dictionary_value_t*,const( cef_string_t )*,cef_dictionary_value_t* ) set_dictionary;
-        int function( cef_dictionary_value_t*,const( cef_string_t )*,cef_list_value_t* ) set_list;
+        int function( cef_dictionary_value_t*, const( cef_string_t )* ) has_key;
+        int function( cef_dictionary_value_t*, cef_string_list_t ) get_keys;
+        int function( cef_dictionary_value_t*, const( cef_string_t )* ) remove;
+        cef_value_type_t function( cef_dictionary_value_t*, const( cef_string_t )* ) get_type;
+        cef_value_t* function( cef_dictionary_value_t*, const( cef_string_t )* ) get_value;
+        int function( cef_dictionary_value_t*, const( cef_string_t )* ) get_bool;
+        int function( cef_dictionary_value_t*, const( cef_string_t )* ) get_int;
+        double function( cef_dictionary_value_t*, const( cef_string_t )* ) get_double;
+        cef_string_userfree_t function( cef_dictionary_value_t*, const( cef_string_t )* ) get_string;
+        cef_binary_value_t* function( cef_dictionary_value_t* self, const( cef_string_t )* key) get_binary;
+        cef_dictionary_value_t* function( cef_dictionary_value_t* self, const( cef_string_t )* key) get_dictionary;
+        cef_list_value_t* function( cef_dictionary_value_t*, const( cef_string_t )* ) get_list;
+        int function( cef_dictionary_value_t*, const( cef_string_t )*, cef_value_t* ) set_value;
+        int function( cef_dictionary_value_t*, const( cef_string_t )* ) set_null;
+        int function( cef_dictionary_value_t*, const( cef_string_t )*, int ) set_bool;
+        int function( cef_dictionary_value_t*, const( cef_string_t )*, int ) set_int;
+        int function( cef_dictionary_value_t*, const( cef_string_t )*, double ) set_double;
+        int function( cef_dictionary_value_t*, const( cef_string_t )*, const( cef_string_t )* ) set_string;
+        int function( cef_dictionary_value_t*, const( cef_string_t )*, cef_binary_value_t* ) set_binary;
+        int function( cef_dictionary_value_t*, const( cef_string_t )*, cef_dictionary_value_t* ) set_dictionary;
+        int function( cef_dictionary_value_t*, const( cef_string_t )*, cef_list_value_t* ) set_list;
     }
 }
 
@@ -1786,27 +2621,43 @@ struct cef_list_value_t {
         int function( cef_list_value_t* ) is_valid;
         int function( cef_list_value_t* ) is_owned;
         int function( cef_list_value_t* ) is_read_only;
+        int function( cef_list_value_t*, cef_list_value_t* ) is_same;
+        int function( cef_list_value_t*, cef_list_value_t* ) is_equal;
         cef_list_value_t* function( cef_list_value_t* ) copy;
-        int function( cef_list_value_t*,size_t ) set_size;
+        int function( cef_list_value_t*, size_t ) set_size;
         size_t function( cef_list_value_t* ) get_size;
         int function( cef_list_value_t* ) clear;
-        int function( cef_list_value_t*,int ) remove;
-        cef_value_type_t function( cef_list_value_t*,int ) get_type;
-        int function( cef_list_value_t*,int ) get_bool;
-        int function( cef_list_value_t*,int ) get_int;
-        double function( cef_list_value_t*,int ) get_double;
-        cef_string_userfree_t function( cef_list_value_t*,int ) get_string;
-        cef_binary_value_t* function( cef_list_value_t*,int ) get_binary;
-        cef_dictionary_value_t* function( cef_list_value_t*,int ) get_dictionary;
-        cef_list_value_t* function( cef_list_value_t*,int ) get_list;
-        int function( cef_list_value_t*,int ) set_null;
-        int function( cef_list_value_t*,int,int ) set_bool;
-        int function( cef_list_value_t*,int,int ) set_int;
-        int function( cef_list_value_t*,int,double ) set_double;
-        int function( cef_list_value_t*,int,const( cef_string_t )* ) set_string;
-        int function( cef_list_value_t*,int,cef_binary_value_t* ) set_binary;
-        int function( cef_list_value_t*,int,cef_dictionary_value_t* ) set_dictionary;
-        int function( cef_list_value_t*,int,cef_list_value_t* ) set_list;
+        int function( cef_list_value_t*, size_t ) remove;
+        cef_value_type_t function( cef_list_value_t*, size_t ) get_type;
+        cef_value_t* function( cef_list_value_t*, size_t ) get_value;
+        int function( cef_list_value_t*, size_t ) get_bool;
+        int function( cef_list_value_t*, size_t ) get_int;
+        double function( cef_list_value_t*, size_t ) get_double;
+        cef_string_userfree_t function( cef_list_value_t*, size_t ) get_string;
+        cef_binary_value_t* function( cef_list_value_t*, size_t ) get_binary;
+        cef_dictionary_value_t* function( cef_list_value_t*, size_t ) get_dictionary;
+        cef_list_value_t* function( cef_list_value_t*, size_t ) get_list;
+        int function( cef_list_value_t*, size_t, cef_value_t* ) set_value;
+        int function( cef_list_value_t*, size_t ) set_null;
+        int function( cef_list_value_t*, size_t, int ) set_bool;
+        int function( cef_list_value_t*, size_t, int ) set_int;
+        int function( cef_list_value_t*, size_t, double ) set_double;
+        int function( cef_list_value_t*, size_t, const( cef_string_t )* ) set_string;
+        int function( cef_list_value_t*, size_t, cef_binary_value_t* ) set_binary;
+        int function( cef_list_value_t*, size_t, cef_dictionary_value_t*value) set_dictionary;
+        int function( cef_list_value_t*, size_t, cef_list_value_t* ) set_list;
+    }
+}
+
+// cef_waitable_event_capi.h
+struct cef_waitable_event_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_waitable_event_t* ) reset;
+        void function( cef_waitable_event_t* ) signal;
+        int function( cef_waitable_event_t* ) is_signaled;
+        void function( cef_waitable_event_t* ) wait;
+        int function( cef_waitable_event_t*, ulong ) timed_wait;
     }
 }
 
@@ -1829,6 +2680,43 @@ struct cef_web_plugin_info_visitor_t {
 struct cef_web_plugin_unstable_callback_t {
     cef_base_t base;
     extern( System ) @nogc nothrow void function( cef_web_plugin_unstable_callback_t,const( cef_string_t )*,int ) is_unstable;
+}
+
+struct cef_register_cdm_callback_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow void function( cef_register_cdm_callback_t*, cef_cdm_registration_error_t, const ( cef_string_t )* ) on_cdm_registration_complete;
+}
+
+// cef_x509_certificate_capi.h
+struct cef_x509cert_principal_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        cef_string_userfree_t function( cef_x509cert_principal_t* ) get_display_name;
+        cef_string_userfree_t function( cef_x509cert_principal_t* ) get_common_name;
+        cef_string_userfree_t function( cef_x509cert_principal_t* ) get_locality_name;
+        cef_string_userfree_t function( cef_x509cert_principal_t* ) get_state_or_province_name;
+        cef_string_userfree_t function( cef_x509cert_principal_t* ) get_country_name;
+        void function( cef_x509cert_principal_t*, cef_string_list_t ) get_street_addresses;
+        void function( cef_x509cert_principal_t*, cef_string_list_t ) get_organization_names;
+        void function( cef_x509cert_principal_t*, cef_string_list_t ) get_organization_unit_names;
+        void function( cef_x509cert_principal_t*, cef_string_list_t ) get_domain_components;
+    }
+}
+
+struct cef_x509certificate_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        cef_x509cert_principal_t* function( cef_x509certificate_t* ) get_subject;
+        cef_x509cert_principal_t* function( cef_x509certificate_t* ) get_issuer;
+        cef_binary_value_t* function( cef_x509certificate_t* ) get_serial_number;
+        cef_time_t function( cef_x509certificate_t* ) get_valid_start;
+        cef_time_t function( cef_x509certificate_t* ) get_valid_expiry;
+        cef_binary_value_t* function( cef_x509certificate_t* ) get_derencoded;
+        cef_binary_value_t* function( cef_x509certificate_t* ) get_pemencoded;
+        size_t function( cef_x509certificate_t* ) get_issuer_chain_size;
+        void function( cef_x509certificate_t*, size_t*, cef_binary_value_t** ) get_derencoded_issuer_chain;
+        void function( cef_x509certificate_t*, size_t*, cef_binary_value_t** ) get_pemencoded_issuer_chain;
+    }
 }
 
 // cef_xml_reader_capi.h
@@ -1885,5 +2773,472 @@ struct cef_zip_reader_t {
         int function( cef_zip_reader_t*,void*,size_t ) read_file;
         int64 function( cef_zip_reader_t* ) tell;
         int function( cef_zip_reader_t* ) eof;
+    }
+}
+
+// test/cef_translator_test_capi.h
+struct cef_translator_test_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_translator_test_t* ) get_void;
+        int function( cef_translator_test_t* ) get_bool;
+        int function( cef_translator_test_t* ) get_int;
+        double function( cef_translator_test_t* ) get_double;
+        long function( cef_translator_test_t* ) get_long;
+        size_t function( cef_translator_test_t* ) get_sizet;
+        int function( cef_translator_test_t* ) set_void;
+        int function( cef_translator_test_t*, int ) set_bool;
+        int function( cef_translator_test_t*, int ) set_int;
+        int function( cef_translator_test_t*, double ) set_double;
+        int function( cef_translator_test_t*, long ) set_long;
+        int function( cef_translator_test_t*, size_t ) set_sizet;
+        int function( cef_translator_test_t*, size_t, const( int* ) ) set_int_list;
+        int function( cef_translator_test_t*, size_t*, int* ) get_int_list_by_ref;
+        size_t function( cef_translator_test_t* ) get_int_list_size;
+        cef_string_userfree_t function( cef_translator_test_t* ) get_string;
+        int function( cef_translator_test_t*, const( cef_string_t )* ) set_string;
+        void function( cef_translator_test_t*, cef_string_t* ) get_string_by_ref;
+        int function( cef_translator_test_t*, cef_string_list_t ) set_string_list;
+        int function( cef_translator_test_t*, cef_string_list_t ) get_string_list_by_ref;
+        int function( cef_translator_test_t*, cef_string_map_t ) set_string_map;
+        int function( cef_translator_test_t*, cef_string_map_t ) get_string_map_by_ref;
+        int function( cef_translator_test_t*, cef_string_multimap_t ) set_string_multimap;
+        int function( cef_translator_test_t*, cef_string_multimap_t ) get_string_multimap_by_ref;
+        cef_point_t function( cef_translator_test_t* ) get_point;
+        int function( cef_translator_test_t*, const( cef_point_t )* ) set_point;
+        void function( cef_translator_test_t*, cef_point_t* ) get_point_by_ref;
+        int function( cef_translator_test_t*, size_t, const( cef_point_t* ) val) set_point_list;
+        int function( cef_translator_test_t*, size_t*, cef_point_t* ) get_point_list_by_ref;
+        size_t function( cef_translator_test_t* ) get_point_list_size;
+        cef_translator_test_ref_ptr_library_t* function( cef_translator_test_t*, int ) get_ref_ptr_library;
+        int function( cef_translator_test_t*, cef_translator_test_ref_ptr_library_t* ) set_ref_ptr_library;
+        cef_translator_test_ref_ptr_library_t* function( cef_translator_test_t*, cef_translator_test_ref_ptr_library_t* ) set_ref_ptr_library_and_return;
+        int function( cef_translator_test_t*, cef_translator_test_ref_ptr_library_child_t* ) set_child_ref_ptr_library;
+        cef_translator_test_ref_ptr_library_t* function( cef_translator_test_t*, cef_translator_test_ref_ptr_library_child_t* ) set_child_ref_ptr_library_and_return_parent;
+        int function( cef_translator_test_t*, size_t, const( cef_translator_test_ref_ptr_library_t* ) val, int , int ) set_ref_ptr_library_list;
+        int function( cef_translator_test_t*, size_t*, cef_translator_test_ref_ptr_library_t**, int, int ) get_ref_ptr_library_list_by_ref;
+        size_t function( cef_translator_test_t* ) get_ref_ptr_library_list_size;
+        int function( cef_translator_test_t*, cef_translator_test_ref_ptr_client_t* ) set_ref_ptr_client;
+        cef_translator_test_ref_ptr_client_t* function( cef_translator_test_t* self, cef_translator_test_ref_ptr_client_t* ) set_ref_ptr_client_and_return;
+        int function( cef_translator_test_t*, cef_translator_test_ref_ptr_client_child_t* ) set_child_ref_ptr_client;
+        cef_translator_test_ref_ptr_client_t* function( cef_translator_test_t*, cef_translator_test_ref_ptr_client_child_t* ) set_child_ref_ptr_client_and_return_parent;
+        int function( cef_translator_test_t*, size_t, const( cef_translator_test_ref_ptr_client_t* ) val, int, int ) set_ref_ptr_client_list;
+        int function( cef_translator_test_t*, size_t*, cef_translator_test_ref_ptr_client_t**, cef_translator_test_ref_ptr_client_t*, cef_translator_test_ref_ptr_client_t* ) get_ref_ptr_client_list_by_ref;
+        size_t function( cef_translator_test_t* ) get_ref_ptr_client_list_size;
+        cef_translator_test_scoped_library_t* function( cef_translator_test_t*, int ) get_own_ptr_library;
+        int function( cef_translator_test_t*, cef_translator_test_scoped_library_t* ) set_own_ptr_library;
+        cef_translator_test_scoped_library_t* function( cef_translator_test_t*, cef_translator_test_scoped_library_t* ) set_own_ptr_library_and_return;
+        int function( cef_translator_test_t*, cef_translator_test_scoped_library_child_t* ) set_child_own_ptr_library;
+        cef_translator_test_scoped_library_t* function( cef_translator_test_t*, cef_translator_test_scoped_library_child_t* ) set_child_own_ptr_library_and_return_parent;
+        int function( cef_translator_test_t*, cef_translator_test_scoped_client_t* ) set_own_ptr_client;
+        cef_translator_test_scoped_client_t* function( cef_translator_test_t*, cef_translator_test_scoped_client_t* ) set_own_ptr_client_and_return;
+        int function( cef_translator_test_t*, cef_translator_test_scoped_client_child_t* ) set_child_own_ptr_client;
+        cef_translator_test_scoped_client_t* function( cef_translator_test_t*, cef_translator_test_scoped_client_child_t* ) set_child_own_ptr_client_and_return_parent;
+        int function( cef_translator_test_t*, cef_translator_test_scoped_library_t* ) set_raw_ptr_library;
+        int function( cef_translator_test_t*, cef_translator_test_scoped_library_child_t* ) set_child_raw_ptr_library;
+        int function( cef_translator_test_t*, size_t, const( cef_translator_test_scoped_library_t* ), int, int ) set_raw_ptr_library_list;
+        int function( cef_translator_test_t*, cef_translator_test_scoped_client_t* ) set_raw_ptr_client;
+        int function( cef_translator_test_t*, cef_translator_test_scoped_client_child_t* ) set_child_raw_ptr_client;
+        int function( cef_translator_test_t*, size_t, const( cef_translator_test_scoped_client_t* ), int, int ) set_raw_ptr_client_list;
+    }
+}
+
+struct cef_translator_test_ref_ptr_library_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        int function( cef_translator_test_ref_ptr_library_t* ) get_value;
+        void function( cef_translator_test_ref_ptr_library_t*, int ) set_value;
+    }
+}
+
+struct cef_translator_test_ref_ptr_library_child_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        int function( cef_translator_test_ref_ptr_library_child_t* ) get_other_value;
+        void function( cef_translator_test_ref_ptr_library_child_t*, int ) set_other_value;
+    }
+}
+
+struct cef_translator_test_ref_ptr_library_child_child_t {
+    cef_translator_test_ref_ptr_library_t base;
+    extern( System ) @nogc nothrow {
+        int function( cef_translator_test_ref_ptr_library_child_child_t* ) get_other_other_value;
+        void function( cef_translator_test_ref_ptr_library_child_child_t*, int ) set_other_other_value;
+    }
+}
+
+struct cef_translator_test_ref_ptr_client_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow int function( cef_translator_test_ref_ptr_client_t* ) get_value;
+}
+
+struct cef_translator_test_ref_ptr_client_child_t {
+    cef_translator_test_ref_ptr_client_t base;
+    extern( System ) @nogc nothrow int function( cef_translator_test_ref_ptr_client_child_t* ) get_other_value;
+}
+
+struct cef_translator_test_scoped_library_t {
+    cef_base_scoped_t base;
+    extern( System ) @nogc nothrow {
+        int function( cef_translator_test_scoped_library_t* ) get_value;
+        void function( cef_translator_test_scoped_library_t*, int ) set_value;
+    }
+}
+
+struct cef_translator_test_scoped_library_child_t {
+    cef_translator_test_scoped_library_t base;
+    extern( System ) @nogc nothrow {
+        int function( cef_translator_test_scoped_library_child_t* ) get_other_value;
+        void function( cef_translator_test_scoped_library_child_t*, int ) set_other_value;
+    }
+}
+
+struct cef_translator_test_scoped_library_child_child_t {
+    cef_translator_test_scoped_library_child_t base;
+    extern( System ) @nogc nothrow {
+        int function( cef_translator_test_scoped_library_child_child_t* ) get_other_other_value;
+        void function( cef_translator_test_scoped_library_child_child_t*, int ) set_other_other_value;
+    }
+}
+
+struct cef_translator_test_scoped_client_t {
+    cef_base_scoped_t base;
+    extern( System ) @nogc nothrow int function( cef_translator_test_scoped_client_t* ) get_value;
+}
+
+struct cef_translator_test_scoped_client_child_t {
+    cef_translator_test_scoped_client_t base;
+    extern( System ) @nogc nothrow int function( cef_translator_test_scoped_client_child_t* ) get_other_value;
+}
+
+// views/cef_box_layout_capi.h
+struct cef_box_layout_t {
+    cef_layout_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_box_layout_t*, cef_view_t*, int ) set_flex_for_view;
+        void function( cef_box_layout_t*, cef_view_t* ) clear_flex_for_view;
+    }
+}
+
+// views/cef_browser_view_capi.h
+struct cef_browser_view_t {
+    cef_view_t base;
+    extern( System ) @nogc nothrow {
+        cef_browser_t* function( cef_browser_view_t* ) get_browser;
+        void function( cef_browser_view_t* , int ) set_prefer_accelerators;
+    }
+}
+
+// views/cef_browser_view_delegate_capi.h
+struct cef_browser_view_delegate_t {
+    cef_view_delegate_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_browser_view_delegate_t*, cef_browser_view_t*, cef_browser_t* ) on_browser_created;
+        void function( cef_browser_view_delegate_t*, cef_browser_view_t*, cef_browser_t* ) on_browser_destroyed;
+        cef_browser_view_delegate_t* function( cef_browser_view_delegate_t*, cef_browser_view_t*, const( cef_browser_settings_t )*, cef_client_t*, int ) get_delegate_for_popup_browser_view;
+        int function( cef_browser_view_delegate_t*, cef_browser_view_t*, cef_browser_view_t*, int is_devtools) on_popup_browser_view_created;
+    }
+}
+
+// views/cef_button_capi.h
+struct cef_button_t {
+    cef_view_t base;
+    extern( System ) @nogc nothrow {
+        cef_label_button_t* function( cef_button_t* ) as_label_button;
+        void function( cef_button_t*, cef_button_state_t ) set_state;
+        cef_button_state_t function( cef_button_t* ) get_state;
+        void function( cef_button_t*, int ) set_ink_drop_enabled;
+        void function( cef_button_t*, const( cef_string_t )* ) set_tooltip_text;
+        void function( cef_button_t*, const( cef_string_t )* ) set_accessible_name;
+    }
+}
+
+// views/cef_button_delegate_capi.h
+struct cef_button_delegate_t {
+    cef_view_delegate_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_button_delegate_t*, cef_button_t* ) on_button_pressed;
+        void function( cef_button_delegate_t*, cef_button_t* ) on_button_state_changed;
+    }
+}
+
+// views/cef_display_capi.h
+struct cef_display_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        long function( cef_display_t* )get_id;
+        float function( cef_display_t* ) get_device_scale_factor;
+        void function( cef_display_t*, cef_point_t* ) convert_point_to_pixels;
+        void function( cef_display_t*, cef_point_t* ) convert_point_from_pixels;
+        cef_rect_t function( cef_display_t* ) get_bounds;
+        cef_rect_t function( cef_display_t* ) get_work_area;
+        int function( cef_display_t* ) get_rotation;
+    }
+}
+
+// views/cef_fill_layout_capi.h
+struct cef_fill_layout_t {
+    cef_layout_t base;
+}
+
+// views/cef_label_button_capi.h
+struct cef_label_button_t {
+    cef_button_t base;
+    extern( System ) @nogc nothrow {
+        cef_menu_button_t* function( cef_label_button_t* ) as_menu_button;
+        void function( cef_label_button_t*, const( cef_string_t )* ) set_text;
+        cef_string_userfree_t function( cef_label_button_t* ) get_text;
+        void function( cef_label_button_t*, cef_button_state_t, cef_image_t* ) set_image;
+        cef_image_t* function( cef_label_button_t*, cef_button_state_t ) get_image;
+        void function( cef_label_button_t*, cef_button_state_t, cef_color_t ) set_text_color;
+        void function( cef_label_button_t* , cef_color_t ) set_enabled_text_colors;
+        void function( cef_label_button_t* , const( cef_string_t )* ) set_font_list;
+        void function( cef_label_button_t*, cef_horizontal_alignment_t ) set_horizontal_alignment;
+        void function( cef_label_button_t*, const( cef_size_t )* size) set_minimum_size;
+        void function( cef_label_button_t*, const( cef_size_t )* ) set_maximum_size;
+    }
+}
+
+// views/cef_layout_capi.h
+struct cef_layout_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        cef_box_layout_t* function( cef_layout_t* ) as_box_layout;
+        cef_fill_layout_t* function( cef_layout_t* ) as_fill_layout;
+        int function( cef_layout_t* ) is_valid;
+    }
+}
+
+// views/cef_menu_button_capi.h
+struct cef_menu_button_t {
+    cef_label_button_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_menu_button_t*, cef_menu_model_t*, const( cef_point_t )* , cef_menu_anchor_position_t ) show_menu;
+        void function( cef_menu_button_t* ) trigger_menu;
+    }
+}
+
+// views/cef_menu_button_delegate_capi.h
+struct cef_menu_button_pressed_lock_t {
+    cef_base_t base;
+}
+
+struct cef_menu_button_delegate_t {
+    cef_button_delegate_t base;
+    extern( System ) @nogc nothrow void function( cef_menu_button_delegate_t* self, cef_menu_button_t*, const( cef_point_t )*, cef_menu_button_pressed_lock_t* ) on_menu_button_pressed;
+}
+
+// views/cef_panel_capi.h
+struct cef_panel_t {
+    cef_view_t base;
+    extern( System ) @nogc nothrow {
+        cef_window_t* function( cef_panel_t* ) as_window;
+        cef_fill_layout_t* function( cef_panel_t* ) set_to_fill_layout;
+        cef_box_layout_t* function( cef_panel_t*, const( cef_box_layout_settings_t )* ) set_to_box_layout;
+        cef_layout_t* function( cef_panel_t* ) get_layout;
+        void function( cef_panel_t* ) layout;
+        void function( cef_panel_t*, cef_view_t* ) add_child_view;
+        void function( cef_panel_t*, cef_view_t*, int ) add_child_view_at;
+        void function( cef_panel_t*, cef_view_t*, int ) reorder_child_view;
+        void function( cef_panel_t*, cef_view_t* ) remove_child_view;
+        void function( cef_panel_t* ) remove_all_child_views;
+        size_t function( cef_panel_t* ) get_child_view_count;
+        cef_view_t* function( cef_panel_t*, int ) get_child_view_at;
+    }
+}
+
+// views/cef_panel_delegate_capi.h
+struct cef_panel_delegate_t {
+    cef_view_delegate_t base;
+}
+
+// views/cef_scroll_view_capi.h
+struct cef_scroll_view_t {
+    cef_view_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_scroll_view_t*, cef_view_t* ) set_content_view;
+        cef_view_t* function( cef_scroll_view_t* ) get_content_view;
+        cef_rect_t function( cef_scroll_view_t* ) get_visible_content_rect;
+        int function( cef_scroll_view_t* ) has_horizontal_scrollbar ;
+        int function( cef_scroll_view_t* ) get_horizontal_scrollbar_height;
+        int function( cef_scroll_view_t* ) has_vertical_scrollbar;
+        int function( cef_scroll_view_t* ) get_vertical_scrollbar_width;
+    }
+}
+
+// views/cef_scroll_view_capi.h
+struct cef_textfield_t {
+    cef_view_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_textfield_t*, int ) set_password_input;
+        int function( cef_textfield_t* ) is_password_input;
+        void function( cef_textfield_t*, int ) set_read_only;
+        int function( cef_textfield_t* ) is_read_only;
+        cef_string_userfree_t function( cef_textfield_t* ) get_text;
+        void function( cef_textfield_t* , const( cef_string_t )* ) set_text;
+        void function( cef_textfield_t*, const( cef_string_t )* ) append_text;
+        void function( cef_textfield_t*, const( cef_string_t )* ) insert_or_replace_text;
+        int function( cef_textfield_t* ) has_selection;
+        cef_string_userfree_t function( cef_textfield_t* ) get_selected_text;
+        void function( cef_textfield_t*, int ) select_all;
+        void function( cef_textfield_t*) clear_selection;
+        cef_range_t function( cef_textfield_t* ) get_selected_range;
+        void function( cef_textfield_t*, const( cef_range_t )* ) select_range;
+        size_t function( cef_textfield_t* ) get_cursor_position;
+        void function( cef_textfield_t*, cef_color_t ) set_text_color;
+        cef_color_t function( cef_textfield_t* ) get_text_color;
+        void function( cef_textfield_t*, cef_color_t ) set_selection_text_color;
+        cef_color_t function( cef_textfield_t* ) get_selection_text_color; 
+        void function( cef_textfield_t*, cef_color_t ) set_selection_background_color;
+        cef_color_t function( cef_textfield_t* ) get_selection_background_color;
+        void function( cef_textfield_t*, cef_string_t* ) set_font_list;
+        void function( cef_textfield_t*, cef_color_t, const( cef_range_t )* ) apply_text_color;
+        void function( cef_textfield_t*, cef_text_style_t, int, const( cef_range_t )* ) apply_text_style;
+        int function( cef_textfield_t*, int ) is_command_enabled;
+        void function( cef_textfield_t*, int ) execute_command;
+        void function( cef_textfield_t* )clear_edit_history;
+        void function( cef_textfield_t*, const( cef_string_t )* text) set_placeholder_text;
+        cef_string_userfree_t function( cef_textfield_t* ) get_placeholder_text;
+        void function( cef_textfield_t*, cef_color_t ) set_placeholder_text_color;
+        void function( cef_textfield_t*, const( cef_string_t )* ) set_accessible_name;
+    }
+}
+
+// views/cef_textfield_delegate_capi.h
+struct cef_textfield_delegate_t {
+    cef_view_delegate_t base;
+    extern( System ) @nogc nothrow {
+        int function( cef_textfield_delegate_t*, cef_textfield_t*, const( cef_key_event_t )* ) on_key_event;
+        void function( cef_textfield_delegate_t*, cef_textfield_t* ) on_after_user_action;
+    }
+}
+
+// views/cef_view_capi.h
+struct cef_view_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        cef_browser_view_t* function( cef_view_t* ) as_browser_view;
+        cef_button_t* function( cef_view_t* ) as_button;
+        cef_panel_t* function( cef_view_t* ) as_panel;
+        cef_scroll_view_t* function( cef_view_t* ) as_scroll_view;
+        cef_textfield_t* function( cef_view_t* ) as_textfield;
+        cef_string_userfree_t function( cef_view_t* ) get_type_string;
+        cef_string_userfree_t function( cef_view_t* , int ) to_string;
+        int function( cef_view_t* ) is_valid;
+        int function( cef_view_t* ) is_attached;
+        int function( cef_view_t*, cef_view_t* ) is_same;
+        cef_view_delegate_t* function( cef_view_t* ) get_delegate;
+        cef_window_t* function( cef_view_t* ) get_window;
+        int function( cef_view_t* ) get_id;
+        void function( cef_view_t*, int ) set_id;
+        int function( cef_view_t*) get_group_id;
+        void function( cef_view_t*, int ) set_group_id;
+        cef_view_t* function( cef_view_t* ) get_parent_view;
+        cef_view_t* function( cef_view_t*, int ) get_view_for_id;
+        void function( cef_view_t*, const( cef_rect_t )* ) set_bounds;
+        cef_rect_t function( cef_view_t* ) get_bounds;
+        cef_rect_t function( cef_view_t* ) get_bounds_in_screen;
+        void function( cef_view_t*, const( cef_size_t )* ) set_size;
+        cef_size_t function( cef_view_t* ) get_size;
+        void function( cef_view_t*, const( cef_point_t )* ) set_position;
+        cef_point_t function( cef_view_t* ) get_position;
+        cef_size_t function( cef_view_t* ) get_preferred_size;
+        void function( cef_view_t* ) size_to_preferred_size;
+        cef_size_t function( cef_view_t* ) get_minimum_size;
+        cef_size_t function( cef_view_t* ) get_maximum_size;
+        int function( cef_view_t*, int) get_height_for_width;
+        void function( cef_view_t* ) invalidate_layout;
+        void function( cef_view_t*, int ) set_visible;
+        int function( cef_view_t* ) is_visible;
+        int function( cef_view_t* ) is_drawn;
+        void function( cef_view_t* , int ) set_enabled;
+        int function( cef_view_t* ) is_enabled;
+        void function( cef_view_t* , int ) set_focusable;
+        int function( cef_view_t* ) is_focusable;
+        int function( cef_view_t* ) is_accessibility_focusable;
+        void function( cef_view_t* ) request_focus;
+        void function( cef_view_t*, cef_color_t ) set_background_color;
+        cef_color_t function( cef_view_t* ) get_background_color;
+        int function( cef_view_t*, cef_point_t* ) convert_point_to_screen;
+        int function( cef_view_t*, cef_point_t* ) convert_point_from_screen;
+        int function( cef_view_t*, cef_point_t* ) convert_point_to_window;
+        int function( cef_view_t*, cef_point_t* ) convert_point_from_window;
+        int function( cef_view_t* , cef_view_t*, cef_point_t* ) convert_point_to_view;
+        int function( cef_view_t*, cef_view_t*, cef_point_t* ) convert_point_from_view;
+    }
+}
+
+// views/cef_view_delegate_capi.h
+struct cef_view_delegate_t {
+    cef_base_t base;
+    extern( System ) @nogc nothrow {
+        cef_size_t function( cef_view_delegate_t*, cef_view_t* ) get_preferred_size;
+        cef_size_t function( cef_view_delegate_t*, cef_view_t* ) get_minimum_size;
+        cef_size_t function( cef_view_delegate_t*, cef_view_t*) get_maximum_size;
+        int function( cef_view_delegate_t*, cef_view_t*, int ) get_height_for_width;
+        void function( cef_view_delegate_t*, cef_view_t*, int , cef_view_t* ) on_parent_view_changed;
+        void function( cef_view_delegate_t*, cef_view_t*, int, cef_view_t* ) on_child_view_changed;
+        void function( cef_view_delegate_t* , cef_view_t* ) on_focus;
+        void function( cef_view_delegate_t*, cef_view_t* ) on_blur;
+    }
+}
+
+// views/cef_window_capi.h
+struct  cef_window_t {
+    cef_panel_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_window_t* ) show;
+        void function( cef_window_t* ) hide;
+        void function( cef_window_t*, const( cef_size_t )* ) center_window;
+        void function( cef_window_t* ) close;
+        int function( cef_window_t* ) is_closed;
+        void function( cef_window_t* ) activate;
+        void function( cef_window_t* ) deactivate;
+        int function( cef_window_t* ) is_active;
+        void function( cef_window_t* ) bring_to_top;
+        void function( cef_window_t*, int ) set_always_on_top;
+        int function( cef_window_t* ) is_always_on_top;
+        void function( cef_window_t* ) maximize;
+        void function( cef_window_t* ) minimize;
+        void function( cef_window_t* ) restore;
+        void function( cef_window_t*, int ) set_fullscreen;
+        int function( cef_window_t*) is_maximized;
+        int function( cef_window_t* ) is_minimized;
+        int function( cef_window_t* ) is_fullscreen;
+        void function( cef_window_t*, const( cef_string_t )* ) set_title;
+        cef_string_userfree_t function( cef_window_t* ) get_title;
+        void function( cef_window_t*, cef_image_t* ) set_window_icon;
+        cef_image_t* function( cef_window_t* ) get_window_icon;
+        void function( cef_window_t*, cef_image_t* ) set_window_app_icon;
+        cef_image_t* function( cef_window_t* ) get_window_app_icon;
+        void function( cef_window_t*, cef_menu_model_t*, const( cef_point_t )* , cef_menu_anchor_position_t ) show_menu;
+        void function( cef_window_t* ) cancel_menu;
+        cef_display_t* function( cef_window_t* ) get_display;
+        cef_rect_t function( cef_window_t* ) get_client_area_bounds_in_screen;
+        void function( cef_window_t* , size_t, const( cef_draggable_region_t* ) ) set_draggable_regions;
+        cef_window_handle_t function( cef_window_t* ) get_window_handle;
+        void function( cef_window_t*, int, uint ) send_key_press;
+        void function( cef_window_t*, int, int ) send_mouse_move;
+        void function( cef_window_t*, cef_mouse_button_type_t, int, int ) send_mouse_events;
+        void function( cef_window_t*, int, int, int, int, int ) set_accelerator;
+        void function( cef_window_t*, int ) remove_accelerator;
+        void function( cef_window_t* ) remove_all_accelerators;
+    }
+}
+
+// views/cef_window_delegate_capi.h
+struct cef_window_delegate_t {
+    cef_panel_delegate_t base;
+    extern( System ) @nogc nothrow {
+        void function( cef_window_delegate_t*, cef_window_t* ) on_window_created;
+        void function( cef_window_delegate_t*, cef_window_t* ) on_window_destroyed;
+        cef_window_t* function( cef_window_delegate_t*, cef_window_t*, int*, int* ) get_parent_window;
+        int function( cef_window_delegate_t*, cef_window_t* ) is_frameless;
+        int function( cef_window_delegate_t*, cef_window_t* ) can_resize;
+        int function( cef_window_delegate_t*, cef_window_t* ) can_maximize;
+        int function( cef_window_delegate_t*, cef_window_t* ) can_minimize;
+        int function( cef_window_delegate_t*, cef_window_t* ) can_close;
+        int function( cef_window_delegate_t*, cef_window_t*, int ) on_accelerator;
+        int function( cef_window_delegate_t*, cef_window_t*, const( cef_key_event_t )* ) on_key_event;
     }
 }
